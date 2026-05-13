@@ -77,6 +77,11 @@ func (h *QuestHandler) handleQuestStartInternal(user *store.UserState, questId i
 		user.MainQuest.LatestVersion = nowMillis
 		log.Printf("[HandleQuestStart] QuestMenuPick quest=%d isBattleOnly=%v scene=%d cleared=%v",
 			questId, isBattleOnly, sceneId, isCleared)
+		if isCleared {
+			questState.LatestStartDatetime = nowMillis
+			user.Quests[questId] = questState
+			return
+		}
 
 	case isReplayFlow:
 		h.applyReplayStart(user, questId, isBattleOnly, nowMillis)
