@@ -49,22 +49,17 @@ type RewardItem struct {
 	Count          int32
 }
 
-type BigHuntWeeklyRewardKey struct {
-	ScheduleId    int32
-	AttributeType int32
-}
-
 type BigHuntCatalog struct {
-	BossQuestById         map[int32]BigHuntBossQuestRow
-	QuestById             map[int32]BigHuntQuestRow
-	ScoreCoefficients     map[int32]int32
-	BossByBossId          map[int32]BigHuntBossRow
-	GradeThresholds       map[int32][]GradeThreshold
-	ActiveScheduleId      int32
-	ScoreRewardSchedules  map[int32][]ScoreRewardScheduleEntry
-	ScoreRewardThresholds map[int32][]ScoreRewardThreshold
-	RewardItems           map[int32][]RewardItem
-	WeeklyRewardSchedules map[BigHuntWeeklyRewardKey][]ScoreRewardScheduleEntry
+	BossQuestById               map[int32]BigHuntBossQuestRow
+	QuestById                   map[int32]BigHuntQuestRow
+	ScoreCoefficients           map[int32]int32
+	BossByBossId                map[int32]BigHuntBossRow
+	GradeThresholds             map[int32][]GradeThreshold
+	ActiveScheduleId            int32
+	ScoreRewardSchedules        map[int32][]ScoreRewardScheduleEntry
+	ScoreRewardThresholds       map[int32][]ScoreRewardThreshold
+	RewardItems                 map[int32][]RewardItem
+	WeeklyRewardSchedulesByAttr map[int32][]ScoreRewardScheduleEntry
 }
 
 func (c *BigHuntCatalog) ResolveActiveScoreRewardGroupId(scheduleId int32, nowMillis int64) int32 {
@@ -80,8 +75,8 @@ func (c *BigHuntCatalog) ResolveActiveScoreRewardGroupId(scheduleId int32, nowMi
 	return 0
 }
 
-func (c *BigHuntCatalog) ResolveActiveWeeklyRewardGroupId(key BigHuntWeeklyRewardKey, nowMillis int64) int32 {
-	entries := c.WeeklyRewardSchedules[key]
+func (c *BigHuntCatalog) ResolveActiveWeeklyRewardGroupIdByAttr(attributeType int32, nowMillis int64) int32 {
+	entries := c.WeeklyRewardSchedulesByAttr[attributeType]
 	for _, e := range entries {
 		if nowMillis >= e.StartDatetime {
 			return e.BigHuntScoreRewardGroupId
@@ -264,20 +259,16 @@ func LoadBigHuntCatalog() *BigHuntCatalog {
 	if err != nil {
 		log.Fatalf("load big hunt weekly attribute score reward group schedule table: %v", err)
 	}
-	weeklyRewardSchedules := make(map[BigHuntWeeklyRewardKey][]ScoreRewardScheduleEntry)
+	weeklyRewardSchedulesByAttr := make(map[int32][]ScoreRewardScheduleEntry)
 	for _, r := range weeklySchedRows {
-		key := BigHuntWeeklyRewardKey{
-			ScheduleId:    r.BigHuntWeeklyAttributeScoreRewardGroupScheduleId,
-			AttributeType: r.AttributeType,
-		}
-		weeklyRewardSchedules[key] = append(weeklyRewardSchedules[key], ScoreRewardScheduleEntry{
+		weeklyRewardSchedulesByAttr[r.AttributeType] = append(weeklyRewardSchedulesByAttr[r.AttributeType], ScoreRewardScheduleEntry{
 			BigHuntScoreRewardGroupId: r.BigHuntScoreRewardGroupId,
 			StartDatetime:             r.StartDatetime,
 		})
 	}
-	for k := range weeklyRewardSchedules {
-		sort.Slice(weeklyRewardSchedules[k], func(i, j int) bool {
-			return weeklyRewardSchedules[k][i].StartDatetime > weeklyRewardSchedules[k][j].StartDatetime
+	for k := range weeklyRewardSchedulesByAttr {
+		sort.Slice(weeklyRewardSchedulesByAttr[k], func(i, j int) bool {
+			return weeklyRewardSchedulesByAttr[k][i].StartDatetime > weeklyRewardSchedulesByAttr[k][j].StartDatetime
 		})
 	}
 
@@ -285,15 +276,15 @@ func LoadBigHuntCatalog() *BigHuntCatalog {
 		len(bossQuestById), len(questById), len(bossByBossId), len(scoreCoefficients), len(rewardItems), activeScheduleId)
 
 	return &BigHuntCatalog{
-		BossQuestById:         bossQuestById,
-		QuestById:             questById,
-		ScoreCoefficients:     scoreCoefficients,
-		BossByBossId:          bossByBossId,
-		GradeThresholds:       gradeThresholds,
-		ActiveScheduleId:      activeScheduleId,
-		ScoreRewardSchedules:  scoreRewardSchedules,
-		ScoreRewardThresholds: scoreRewardThresholds,
-		RewardItems:           rewardItems,
-		WeeklyRewardSchedules: weeklyRewardSchedules,
+		BossQuestById:               bossQuestById,
+		QuestById:                   questById,
+		ScoreCoefficients:           scoreCoefficients,
+		BossByBossId:                bossByBossId,
+		GradeThresholds:             gradeThresholds,
+		ActiveScheduleId:            activeScheduleId,
+		ScoreRewardSchedules:        scoreRewardSchedules,
+		ScoreRewardThresholds:       scoreRewardThresholds,
+		RewardItems:                 rewardItems,
+		WeeklyRewardSchedulesByAttr: weeklyRewardSchedulesByAttr,
 	}
 }

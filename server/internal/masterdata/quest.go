@@ -561,4 +561,3 @@ func (q *QuestCatalog) BattleOnlyTargetSceneIdFor(questId int32) (int32, bool) {
 	v, ok := q.BattleOnlyTargetSceneByQuestId[questId]
 	return v, ok
 }
-

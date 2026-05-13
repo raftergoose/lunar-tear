@@ -57,11 +57,12 @@ func init() {
 		for _, id := range ids {
 			st := user.BigHuntStatuses[int32(id)]
 			records = append(records, map[string]any{
-				"userId":                  user.UserId,
-				"bigHuntBossQuestId":      int32(id),
-				"dailyChallengeCount":     st.DailyChallengeCount,
-				"latestChallengeDatetime": st.LatestChallengeDatetime,
-				"latestVersion":           st.LatestVersion,
+				"userId":                            user.UserId,
+				"bigHuntBossQuestId":                int32(id),
+				"dailyChallengeCount":               st.DailyChallengeCount,
+				"latestChallengeDatetime":           st.LatestChallengeDatetime,
+				"lastDailyRewardReceivedDayVersion": st.LastDailyRewardReceivedDayVersion,
+				"latestVersion":                     st.LatestVersion,
 			})
 		}
 		s, _ := utils.EncodeJSONMaps(records...)

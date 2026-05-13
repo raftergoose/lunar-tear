@@ -44,6 +44,8 @@ func (s *BigHuntServiceServer) StartBigHuntQuest(ctx context.Context, req *pb.St
 		log.Printf("[BigHuntService] StartBigHuntQuest: unknown bigHuntQuestId=%d", req.BigHuntQuestId)
 	}
 
+	today := gametime.StartOfDayMillis()
+
 	s.users.UpdateUser(userId, func(user *store.UserState) {
 		if ok {
 			engine.HandleBigHuntQuestStart(user, bhQuest.QuestId, req.UserDeckNumber, nowMillis)
@@ -60,6 +62,9 @@ func (s *BigHuntServiceServer) StartBigHuntQuest(ctx context.Context, req *pb.St
 		user.BigHuntDeckNumber = req.UserDeckNumber
 
 		st := user.BigHuntStatuses[req.BigHuntBossQuestId]
+		if st.LatestChallengeDatetime < today {
+			st.DailyChallengeCount = 0
+		}
 		st.DailyChallengeCount++
 		st.LatestChallengeDatetime = nowMillis
 		st.LatestVersion = nowMillis
@@ -98,12 +103,15 @@ func (s *BigHuntServiceServer) FinishBigHuntQuest(ctx context.Context, req *pb.F
 
 	var scoreInfo *pb.BigHuntScoreInfo
 	var scoreRewards []*pb.BigHuntReward
+	var battleReportWaves []*pb.BigHuntBattleReportWave
 
 	s.users.UpdateUser(userId, func(user *store.UserState) {
 		engine.HandleBigHuntQuestFinish(user, bhQuest.QuestId, req.IsRetired, false, nowMillis)
 
 		if req.IsRetired || user.BigHuntProgress.IsDryRun {
 			user.BigHuntProgress = store.BigHuntProgress{LatestVersion: nowMillis}
+			user.BigHuntBattleBinary = nil
+			user.BigHuntBattleDetail = store.BigHuntBattleDetail{}
 			return
 		}
 
@@ -129,11 +137,7 @@ func (s *BigHuntServiceServer) FinishBigHuntQuest(ctx context.Context, req *pb.F
 
 		userScore := baseScore * int64(1000+difficultyBonusPermil+aliveBonusPermil+maxComboBonusPermil) / 1000
 
-		isHighScore := false
-		oldMaxBoss := user.BigHuntMaxScores[bossQuest.BigHuntBossId]
-		oldMax := oldMaxBoss.MaxScore
-		if userScore > oldMax {
-			isHighScore = true
+		if userScore > user.BigHuntMaxScores[bossQuest.BigHuntBossId].MaxScore {
 			user.BigHuntMaxScores[bossQuest.BigHuntBossId] = store.BigHuntMaxScore{
 				MaxScore:               userScore,
 				MaxScoreUpdateDatetime: nowMillis,
@@ -146,7 +150,8 @@ func (s *BigHuntServiceServer) FinishBigHuntQuest(ctx context.Context, req *pb.F
 			BigHuntBossId:     bossQuest.BigHuntBossId,
 		}
 		oldSchedMax := user.BigHuntScheduleMaxScores[schedKey].MaxScore
-		if userScore > oldSchedMax {
+		isHighScore := userScore > oldSchedMax
+		if isHighScore {
 			user.BigHuntScheduleMaxScores[schedKey] = store.BigHuntScheduleMaxScore{
 				MaxScore:               userScore,
 				MaxScoreUpdateDatetime: nowMillis,
@@ -184,7 +189,7 @@ func (s *BigHuntServiceServer) FinishBigHuntQuest(ctx context.Context, req *pb.F
 			rewardGroupId := catalog.ResolveActiveScoreRewardGroupId(
 				bossQuest.BigHuntScoreRewardGroupScheduleId, nowMillis)
 			if rewardGroupId > 0 {
-				newItems := catalog.CollectNewRewards(rewardGroupId, oldMax, userScore)
+				newItems := catalog.CollectNewRewards(rewardGroupId, oldSchedMax, userScore)
 				for _, item := range newItems {
 					engine.Granter.GrantFull(user, model.PossessionType(item.PossessionType), item.PossessionId, item.Count, nowMillis)
 					scoreRewards = append(scoreRewards, &pb.BigHuntReward{
@@ -193,6 +198,31 @@ func (s *BigHuntServiceServer) FinishBigHuntQuest(ctx context.Context, req *pb.F
 						Count:          item.Count,
 					})
 				}
+			}
+		}
+
+		if len(detail.CostumeBattleInfo) > 0 {
+			wavesByIndex := map[int32]*pb.BigHuntBattleReportWave{}
+			var waveOrder []int32
+			for _, ci := range detail.CostumeBattleInfo {
+				wave, ok := wavesByIndex[ci.WaveIndex]
+				if !ok {
+					wave = &pb.BigHuntBattleReportWave{}
+					wavesByIndex[ci.WaveIndex] = wave
+					waveOrder = append(waveOrder, ci.WaveIndex)
+				}
+				wave.BattleReportCostume = append(wave.BattleReportCostume, &pb.BigHuntBattleReportCostume{
+					CostumeId:   ci.CostumeId,
+					TotalDamage: ci.TotalDamage,
+					HitCount:    ci.HitCount,
+					BattleReportRandomDisplay: &pb.BattleReportRandomDisplay{
+						RandomDisplayValueType: ci.RandomDisplayValueType,
+						RandomDisplayValue:     ci.RandomDisplayValue,
+					},
+				})
+			}
+			for _, idx := range waveOrder {
+				battleReportWaves = append(battleReportWaves, wavesByIndex[idx])
 			}
 		}
 
@@ -208,12 +238,17 @@ func (s *BigHuntServiceServer) FinishBigHuntQuest(ctx context.Context, req *pb.F
 		scoreRewards = []*pb.BigHuntReward{}
 	}
 
+	if battleReportWaves == nil {
+		battleReportWaves = []*pb.BigHuntBattleReportWave{}
+	}
+	battleReport := &pb.BigHuntBattleReport{
+		BattleReportWave: battleReportWaves,
+	}
+
 	return &pb.FinishBigHuntQuestResponse{
-		ScoreInfo:   scoreInfo,
-		ScoreReward: scoreRewards,
-		BattleReport: &pb.BigHuntBattleReport{
-			BattleReportWave: []*pb.BigHuntBattleReportWave{},
-		},
+		ScoreInfo:    scoreInfo,
+		ScoreReward:  scoreRewards,
+		BattleReport: battleReport,
 	}, nil
 }
 
@@ -231,6 +266,8 @@ func (s *BigHuntServiceServer) RestartBigHuntQuest(ctx context.Context, req *pb.
 	var battleBinary []byte
 	var deckNumber int32
 
+	today := gametime.StartOfDayMillis()
+
 	s.users.UpdateUser(userId, func(user *store.UserState) {
 		engine.HandleBigHuntQuestStart(user, bhQuest.QuestId, user.BigHuntDeckNumber, nowMillis)
 
@@ -238,6 +275,9 @@ func (s *BigHuntServiceServer) RestartBigHuntQuest(ctx context.Context, req *pb.
 		user.BigHuntProgress.LatestVersion = nowMillis
 
 		st := user.BigHuntStatuses[req.BigHuntBossQuestId]
+		if st.LatestChallengeDatetime < today {
+			st.DailyChallengeCount = 0
+		}
 		st.DailyChallengeCount++
 		st.LatestChallengeDatetime = nowMillis
 		st.LatestVersion = nowMillis
@@ -256,19 +296,58 @@ func (s *BigHuntServiceServer) RestartBigHuntQuest(ctx context.Context, req *pb.
 func (s *BigHuntServiceServer) SkipBigHuntQuest(ctx context.Context, req *pb.SkipBigHuntQuestRequest) (*pb.SkipBigHuntQuestResponse, error) {
 	log.Printf("[BigHuntService] SkipBigHuntQuest: bossQuestId=%d skipCount=%d", req.BigHuntBossQuestId, req.SkipCount)
 
+	cat := s.holder.Get()
+	catalog := cat.BigHunt
+	granter := cat.QuestHandler.Granter
 	userId := CurrentUserId(ctx, s.users, s.sessions)
 	nowMillis := gametime.NowMillis()
+	today := gametime.StartOfDayMillis()
+
+	bossQuest, hasBossQuest := catalog.BossQuestById[req.BigHuntBossQuestId]
+	var scoreRewards []*pb.BigHuntReward
 
 	s.users.UpdateUser(userId, func(user *store.UserState) {
 		st := user.BigHuntStatuses[req.BigHuntBossQuestId]
+		if st.LatestChallengeDatetime < today {
+			st.DailyChallengeCount = 0
+		}
 		st.DailyChallengeCount += req.SkipCount
 		st.LatestChallengeDatetime = nowMillis
 		st.LatestVersion = nowMillis
 		user.BigHuntStatuses[req.BigHuntBossQuestId] = st
+
+		if !hasBossQuest || req.SkipCount <= 0 {
+			return
+		}
+		rewardGroupId := catalog.ResolveActiveScoreRewardGroupId(bossQuest.BigHuntScoreRewardGroupScheduleId, nowMillis)
+		if rewardGroupId == 0 {
+			return
+		}
+		maxScore := user.BigHuntScheduleMaxScores[store.BigHuntScheduleScoreKey{
+			BigHuntScheduleId: catalog.ActiveScheduleId,
+			BigHuntBossId:     bossQuest.BigHuntBossId,
+		}].MaxScore
+		if maxScore <= 0 {
+			return
+		}
+		items := catalog.CollectNewRewards(rewardGroupId, 0, maxScore)
+		for n := int32(0); n < req.SkipCount; n++ {
+			for _, item := range items {
+				granter.GrantFull(user, model.PossessionType(item.PossessionType), item.PossessionId, item.Count, nowMillis)
+				scoreRewards = append(scoreRewards, &pb.BigHuntReward{
+					PossessionType: item.PossessionType,
+					PossessionId:   item.PossessionId,
+					Count:          item.Count,
+				})
+			}
+		}
 	})
 
+	if scoreRewards == nil {
+		scoreRewards = []*pb.BigHuntReward{}
+	}
 	return &pb.SkipBigHuntQuestResponse{
-		ScoreReward: []*pb.BigHuntReward{},
+		ScoreReward: scoreRewards,
 	}, nil
 }
 
@@ -291,12 +370,35 @@ func (s *BigHuntServiceServer) SaveBigHuntBattleInfo(ctx context.Context, req *p
 		user.BigHuntBattleBinary = req.BattleBinary
 
 		if req.BigHuntBattleDetail != nil {
+			existingCostumes := user.BigHuntBattleDetail.CostumeBattleInfo
+			nextWaveIndex := int32(bigHuntWaveCount(existingCostumes))
+			newCostumes := make([]store.BigHuntCostumeBattleInfo, 0, len(req.BigHuntBattleDetail.CostumeBattleInfo))
+			for _, ci := range req.BigHuntBattleDetail.CostumeBattleInfo {
+				if ci == nil {
+					continue
+				}
+				var rdType int32
+				var rdValue int64
+				if rd := ci.BattleReportRandomDisplay; rd != nil {
+					rdType = rd.RandomDisplayValueType
+					rdValue = rd.RandomDisplayValue
+				}
+				newCostumes = append(newCostumes, store.BigHuntCostumeBattleInfo{
+					WaveIndex:              nextWaveIndex,
+					CostumeId:              resolveBigHuntCostumeId(user, ci.UserDeckNumber, ci.DeckCharacterNumber),
+					TotalDamage:            ci.TotalDamage,
+					HitCount:               ci.HitCount,
+					RandomDisplayValueType: rdType,
+					RandomDisplayValue:     rdValue,
+				})
+			}
 			user.BigHuntBattleDetail = store.BigHuntBattleDetail{
 				DeckType:             req.BigHuntBattleDetail.DeckType,
 				UserTripleDeckNumber: req.BigHuntBattleDetail.UserTripleDeckNumber,
 				BossKnockDownCount:   req.BigHuntBattleDetail.BossKnockDownCount,
 				MaxComboCount:        req.BigHuntBattleDetail.MaxComboCount,
 				TotalDamage:          totalDamage,
+				CostumeBattleInfo:    append(existingCostumes, newCostumes...),
 			}
 		}
 
@@ -351,14 +453,49 @@ func (s *BigHuntServiceServer) GetBigHuntTopData(ctx context.Context, _ *emptypb
 	}, nil
 }
 
+func bigHuntWaveCount(infos []store.BigHuntCostumeBattleInfo) int {
+	if len(infos) == 0 {
+		return 0
+	}
+	return int(infos[len(infos)-1].WaveIndex) + 1
+}
+
+func resolveBigHuntCostumeId(user *store.UserState, userDeckNumber, deckCharacterNumber int32) int32 {
+	if userDeckNumber == 0 {
+		userDeckNumber = user.BigHuntDeckNumber
+	}
+	for _, dt := range []model.DeckType{model.DeckTypeBigHunt, model.DeckTypeQuest} {
+		deck, ok := user.Decks[store.DeckKey{DeckType: dt, UserDeckNumber: userDeckNumber}]
+		if !ok {
+			continue
+		}
+		var dcUuid string
+		switch deckCharacterNumber {
+		case 1:
+			dcUuid = deck.UserDeckCharacterUuid01
+		case 2:
+			dcUuid = deck.UserDeckCharacterUuid02
+		case 3:
+			dcUuid = deck.UserDeckCharacterUuid03
+		}
+		if dcUuid == "" {
+			continue
+		}
+		dc, ok := user.DeckCharacters[dcUuid]
+		if !ok || dc.UserCostumeUuid == "" {
+			continue
+		}
+		if costume, ok := user.Costumes[dc.UserCostumeUuid]; ok {
+			return costume.CostumeId
+		}
+	}
+	return 0
+}
+
 func resolveBigHuntWeeklyRewards(catalog *masterdata.BigHuntCatalog, user store.UserState, weeklyVersion, nowMillis int64) []*pb.BigHuntReward {
 	var rewards []*pb.BigHuntReward
 	for _, boss := range catalog.BossByBossId {
-		rewardKey := masterdata.BigHuntWeeklyRewardKey{
-			ScheduleId:    1,
-			AttributeType: boss.AttributeType,
-		}
-		rewardGroupId := catalog.ResolveActiveWeeklyRewardGroupId(rewardKey, nowMillis)
+		rewardGroupId := catalog.ResolveActiveWeeklyRewardGroupIdByAttr(boss.AttributeType, nowMillis)
 		if rewardGroupId == 0 {
 			continue
 		}

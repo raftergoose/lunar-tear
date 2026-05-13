@@ -6,7 +6,6 @@ import (
 
 	pb "lunar-tear/server/gen/proto"
 	"lunar-tear/server/internal/gametime"
-	"lunar-tear/server/internal/masterdata"
 	"lunar-tear/server/internal/model"
 	"lunar-tear/server/internal/runtime"
 	"lunar-tear/server/internal/store"
@@ -38,12 +37,42 @@ func (s *RewardServiceServer) ReceiveBigHuntReward(ctx context.Context, _ *empty
 	userId := CurrentUserId(ctx, s.users, s.sessions)
 	nowMillis := gametime.NowMillis()
 	weeklyVersion := gametime.WeeklyVersion(nowMillis)
+	today := gametime.StartOfDayMillis()
 
 	var weeklyScoreResults []*pb.WeeklyScoreResult
 	var weeklyRewards []*pb.BigHuntReward
 	isReceived := false
 
 	s.users.UpdateUser(userId, func(user *store.UserState) {
+		for bossQuestId, bossQuest := range bhCatalog.BossQuestById {
+			st := user.BigHuntStatuses[bossQuestId]
+			if st.LastDailyRewardReceivedDayVersion >= today {
+				continue
+			}
+			rewardGroupId := bhCatalog.ResolveActiveScoreRewardGroupId(bossQuest.BigHuntScoreRewardGroupScheduleId, nowMillis)
+			if rewardGroupId == 0 {
+				continue
+			}
+			maxScore := user.BigHuntScheduleMaxScores[store.BigHuntScheduleScoreKey{
+				BigHuntScheduleId: bhCatalog.ActiveScheduleId,
+				BigHuntBossId:     bossQuest.BigHuntBossId,
+			}].MaxScore
+			if maxScore <= 0 {
+				continue
+			}
+			items := bhCatalog.CollectNewRewards(rewardGroupId, 0, maxScore)
+			for _, item := range items {
+				granter.GrantFull(user, model.PossessionType(item.PossessionType), item.PossessionId, item.Count, nowMillis)
+			}
+			if len(items) > 0 {
+				log.Printf("[RewardService] ReceiveBigHuntReward: bossQuestId=%d granted %d daily rewards (maxScore=%d, group=%d)",
+					bossQuestId, len(items), maxScore, rewardGroupId)
+			}
+			st.LastDailyRewardReceivedDayVersion = today
+			st.LatestVersion = nowMillis
+			user.BigHuntStatuses[bossQuestId] = st
+		}
+
 		ws := user.BigHuntWeeklyStatuses[weeklyVersion]
 		isReceived = ws.IsReceivedWeeklyReward
 
@@ -67,11 +96,7 @@ func (s *RewardServiceServer) ReceiveBigHuntReward(ctx context.Context, _ *empty
 
 		if !isReceived {
 			for _, boss := range bhCatalog.BossByBossId {
-				rewardKey := masterdata.BigHuntWeeklyRewardKey{
-					ScheduleId:    1,
-					AttributeType: boss.AttributeType,
-				}
-				rewardGroupId := bhCatalog.ResolveActiveWeeklyRewardGroupId(rewardKey, nowMillis)
+				rewardGroupId := bhCatalog.ResolveActiveWeeklyRewardGroupIdByAttr(boss.AttributeType, nowMillis)
 				if rewardGroupId == 0 {
 					continue
 				}

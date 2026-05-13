@@ -592,9 +592,10 @@ type BigHuntMaxScore struct {
 }
 
 type BigHuntStatus struct {
-	DailyChallengeCount     int32
-	LatestChallengeDatetime int64
-	LatestVersion           int64
+	DailyChallengeCount               int32
+	LatestChallengeDatetime           int64
+	LastDailyRewardReceivedDayVersion int64
+	LatestVersion                     int64
 }
 
 type BigHuntScheduleScoreKey struct {
@@ -657,6 +658,16 @@ type BigHuntBattleDetail struct {
 	BossKnockDownCount   int32
 	MaxComboCount        int32
 	TotalDamage          int64
+	CostumeBattleInfo    []BigHuntCostumeBattleInfo
+}
+
+type BigHuntCostumeBattleInfo struct {
+	WaveIndex              int32
+	CostumeId              int32
+	TotalDamage            int64
+	HitCount               int32
+	RandomDisplayValueType int32
+	RandomDisplayValue     int64
 }
 
 type BattleState struct {

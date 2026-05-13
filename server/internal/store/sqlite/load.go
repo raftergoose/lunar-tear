@@ -173,6 +173,13 @@ func load1to1(db *sql.DB, uid int64, u *store.UserState) {
 			&u.BigHuntBattleDetail.TotalDamage, &u.BigHuntDeckNumber, &u.BigHuntBattleBinary)
 	u.BigHuntProgress.IsDryRun = isDryRun != 0
 
+	queryRows(db, `SELECT wave_index, costume_id, total_damage, hit_count, random_display_value_type, random_display_value
+		FROM user_big_hunt_costume_battle_infos WHERE user_id=? ORDER BY wave_index, sort_order`, uid, func(rows *sql.Rows) {
+		var ci store.BigHuntCostumeBattleInfo
+		rows.Scan(&ci.WaveIndex, &ci.CostumeId, &ci.TotalDamage, &ci.HitCount, &ci.RandomDisplayValueType, &ci.RandomDisplayValue)
+		u.BigHuntBattleDetail.CostumeBattleInfo = append(u.BigHuntBattleDetail.CostumeBattleInfo, ci)
+	})
+
 	var isActive, isUnread int
 	_ = db.QueryRow(`SELECT is_active, start_count, finish_count, last_started_at, last_finished_at,
 		last_user_party_count, last_npc_party_count, last_battle_binary_size, last_elapsed_frame_count
@@ -688,11 +695,11 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 		u.BigHuntMaxScores[id] = v
 	})
 
-	queryRows(db, `SELECT big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, latest_version
+	queryRows(db, `SELECT big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, last_daily_reward_received_day_version, latest_version
 		FROM user_big_hunt_statuses WHERE user_id=?`, uid, func(rows *sql.Rows) {
 		var id int32
 		var v store.BigHuntStatus
-		rows.Scan(&id, &v.DailyChallengeCount, &v.LatestChallengeDatetime, &v.LatestVersion)
+		rows.Scan(&id, &v.DailyChallengeCount, &v.LatestChallengeDatetime, &v.LastDailyRewardReceivedDayVersion, &v.LatestVersion)
 		u.BigHuntStatuses[id] = v
 	})
 

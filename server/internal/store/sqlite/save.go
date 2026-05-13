@@ -83,6 +83,12 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 		u.BigHuntBattleDetail.MaxComboCount, u.BigHuntBattleDetail.TotalDamage, u.BigHuntDeckNumber, u.BigHuntBattleBinary); err != nil {
 		return err
 	}
+	for i, ci := range u.BigHuntBattleDetail.CostumeBattleInfo {
+		if err := exec(`INSERT INTO user_big_hunt_costume_battle_infos (user_id, wave_index, sort_order, costume_id, total_damage, hit_count, random_display_value_type, random_display_value) VALUES (?,?,?,?,?,?,?,?)`,
+			uid, ci.WaveIndex, i, ci.CostumeId, ci.TotalDamage, ci.HitCount, ci.RandomDisplayValueType, ci.RandomDisplayValue); err != nil {
+			return err
+		}
+	}
 	if err := exec(`INSERT INTO user_battle (user_id, is_active, start_count, finish_count, last_started_at, last_finished_at, last_user_party_count, last_npc_party_count, last_battle_binary_size, last_elapsed_frame_count) VALUES (?,?,?,?,?,?,?,?,?,?)`,
 		uid, boolToInt(u.Battle.IsActive), u.Battle.StartCount, u.Battle.FinishCount, u.Battle.LastStartedAt,
 		u.Battle.LastFinishedAt, u.Battle.LastUserPartyCount, u.Battle.LastNpcPartyCount,
@@ -479,8 +485,8 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 		}
 	}
 	for id, v := range u.BigHuntStatuses {
-		if err := exec(`INSERT INTO user_big_hunt_statuses (user_id, big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, latest_version) VALUES (?,?,?,?,?)`,
-			uid, id, v.DailyChallengeCount, v.LatestChallengeDatetime, v.LatestVersion); err != nil {
+		if err := exec(`INSERT INTO user_big_hunt_statuses (user_id, big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, last_daily_reward_received_day_version, latest_version) VALUES (?,?,?,?,?,?)`,
+			uid, id, v.DailyChallengeCount, v.LatestChallengeDatetime, v.LastDailyRewardReceivedDayVersion, v.LatestVersion); err != nil {
 			return err
 		}
 	}
@@ -600,13 +606,22 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 			return err
 		}
 	}
-	if before.BigHuntProgress != after.BigHuntProgress || before.BigHuntBattleDetail != after.BigHuntBattleDetail || before.BigHuntDeckNumber != after.BigHuntDeckNumber {
+	if before.BigHuntProgress != after.BigHuntProgress || !bigHuntBattleDetailEqual(before.BigHuntBattleDetail, after.BigHuntBattleDetail) || before.BigHuntDeckNumber != after.BigHuntDeckNumber {
 		if err := exec(`UPDATE user_big_hunt_state SET current_big_hunt_boss_quest_id=?, current_big_hunt_quest_id=?, current_quest_scene_id=?, is_dry_run=?, latest_version=?, deck_type=?, user_triple_deck_number=?, boss_knock_down_count=?, max_combo_count=?, total_damage=?, deck_number=?, battle_binary=? WHERE user_id=?`,
 			after.BigHuntProgress.CurrentBigHuntBossQuestId, after.BigHuntProgress.CurrentBigHuntQuestId,
 			after.BigHuntProgress.CurrentQuestSceneId, boolToInt(after.BigHuntProgress.IsDryRun), after.BigHuntProgress.LatestVersion,
 			after.BigHuntBattleDetail.DeckType, after.BigHuntBattleDetail.UserTripleDeckNumber, after.BigHuntBattleDetail.BossKnockDownCount,
 			after.BigHuntBattleDetail.MaxComboCount, after.BigHuntBattleDetail.TotalDamage, after.BigHuntDeckNumber, after.BigHuntBattleBinary, uid); err != nil {
 			return err
+		}
+		if err := exec(`DELETE FROM user_big_hunt_costume_battle_infos WHERE user_id=?`, uid); err != nil {
+			return err
+		}
+		for i, ci := range after.BigHuntBattleDetail.CostumeBattleInfo {
+			if err := exec(`INSERT INTO user_big_hunt_costume_battle_infos (user_id, wave_index, sort_order, costume_id, total_damage, hit_count, random_display_value_type, random_display_value) VALUES (?,?,?,?,?,?,?,?)`,
+				uid, ci.WaveIndex, i, ci.CostumeId, ci.TotalDamage, ci.HitCount, ci.RandomDisplayValueType, ci.RandomDisplayValue); err != nil {
+				return err
+			}
 		}
 	}
 	if before.Battle != after.Battle {
@@ -1017,9 +1032,9 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 		"big_hunt_boss_id, max_score, max_score_update_datetime, latest_version")
 	diffMapInt32(tx, uid, before.BigHuntStatuses, after.BigHuntStatuses, "user_big_hunt_statuses", "big_hunt_boss_id",
 		func(v store.BigHuntStatus) []any {
-			return []any{0, v.DailyChallengeCount, v.LatestChallengeDatetime, v.LatestVersion}
+			return []any{0, v.DailyChallengeCount, v.LatestChallengeDatetime, v.LastDailyRewardReceivedDayVersion, v.LatestVersion}
 		},
-		"big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, latest_version")
+		"big_hunt_boss_id, daily_challenge_count, latest_challenge_datetime, last_daily_reward_received_day_version, latest_version")
 
 	for k, v := range after.BigHuntScheduleMaxScores {
 		if old, ok := before.BigHuntScheduleMaxScores[k]; !ok || old != v {
@@ -1056,6 +1071,23 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 	}
 
 	return nil
+}
+
+func bigHuntBattleDetailEqual(a, b store.BigHuntBattleDetail) bool {
+	if a.DeckType != b.DeckType || a.UserTripleDeckNumber != b.UserTripleDeckNumber ||
+		a.BossKnockDownCount != b.BossKnockDownCount || a.MaxComboCount != b.MaxComboCount ||
+		a.TotalDamage != b.TotalDamage {
+		return false
+	}
+	if len(a.CostumeBattleInfo) != len(b.CostumeBattleInfo) {
+		return false
+	}
+	for i := range a.CostumeBattleInfo {
+		if a.CostumeBattleInfo[i] != b.CostumeBattleInfo[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func diffMapInt32[V comparable](tx *sql.Tx, uid int64, before, after map[int32]V, table, keyCol string, vals func(V) []any, cols string) {
