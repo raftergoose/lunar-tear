@@ -142,6 +142,12 @@ func (h *QuestHandler) HandleReplayFlowSceneProgress(user *store.UserState, ques
 	user.PortalCageStatus.IsCurrentProgress = false
 	user.PortalCageStatus.LatestVersion = nowMillis
 
+	if user.SideStoryActiveProgress.CurrentSideStoryQuestId != 0 {
+		user.SideStoryActiveProgress = store.SideStoryActiveProgress{
+			LatestVersion: nowMillis,
+		}
+	}
+
 	flowType := h.replayFlowType(user, questSceneId)
 	user.MainQuest.CurrentQuestFlowType = int32(flowType)
 	user.MainQuest.LatestVersion = nowMillis

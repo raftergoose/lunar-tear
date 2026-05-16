@@ -203,6 +203,11 @@ func (s *QuestServiceServer) SetRoute(ctx context.Context, req *pb.SetRouteReque
 		now := gametime.NowMillis()
 		user.PortalCageStatus.IsCurrentProgress = false
 		user.PortalCageStatus.LatestVersion = now
+		if user.SideStoryActiveProgress.CurrentSideStoryQuestId != 0 {
+			user.SideStoryActiveProgress = store.SideStoryActiveProgress{
+				LatestVersion: now,
+			}
+		}
 	})
 
 	return &pb.SetRouteResponse{}, nil

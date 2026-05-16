@@ -34,6 +34,12 @@ func (s *PortalCageServiceServer) UpdatePortalCageSceneProgress(ctx context.Cont
 			user.MainQuest.CurrentQuestFlowType = int32(model.QuestFlowTypeMainFlow)
 			user.MainQuest.LatestVersion = now
 		}
+		// Returning to Mama's Room also ends any active side story.
+		if user.SideStoryActiveProgress.CurrentSideStoryQuestId != 0 {
+			user.SideStoryActiveProgress = store.SideStoryActiveProgress{
+				LatestVersion: now,
+			}
+		}
 	})
 	return &pb.UpdatePortalCageSceneProgressResponse{}, nil
 }
