@@ -86,6 +86,10 @@ func init() {
 		s, _ := utils.EncodeJSONMaps(sortedPartsPresetRecords(user)...)
 		return s
 	})
+	register("IUserPartsPresetTag", func(user store.UserState) string {
+		s, _ := utils.EncodeJSONMaps(sortedPartsPresetTagRecords(user)...)
+		return s
+	})
 	register("IUserCostumeAwakenStatusUp", func(user store.UserState) string {
 		s, _ := utils.EncodeJSONMaps(sortedCostumeAwakenStatusUpRecords(user)...)
 		return s
@@ -122,7 +126,6 @@ func init() {
 		"IUserCostumeLevelBonusReleaseStatus",
 		"IUserCostumeLotteryEffectAbility",
 		"IUserCostumeLotteryEffectStatusUp",
-		"IUserPartsPresetTag",
 	)
 }
 
@@ -490,6 +493,25 @@ func sortedPartsPresetRecords(user store.UserState) []map[string]any {
 			"userPartsUuid03":          row.UserPartsUuid03,
 			"name":                     row.Name,
 			"userPartsPresetTagNumber": row.UserPartsPresetTagNumber,
+			"latestVersion":            row.LatestVersion,
+		})
+	}
+	return records
+}
+
+func sortedPartsPresetTagRecords(user store.UserState) []map[string]any {
+	ids := make([]int, 0, len(user.PartsPresetTags))
+	for id := range user.PartsPresetTags {
+		ids = append(ids, int(id))
+	}
+	sort.Ints(ids)
+	records := make([]map[string]any, 0, len(ids))
+	for _, id := range ids {
+		row := user.PartsPresetTags[int32(id)]
+		records = append(records, map[string]any{
+			"userId":                   user.UserId,
+			"userPartsPresetTagNumber": row.UserPartsPresetTagNumber,
+			"name":                     row.Name,
 			"latestVersion":            row.LatestVersion,
 		})
 	}

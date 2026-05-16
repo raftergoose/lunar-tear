@@ -312,6 +312,12 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 			return err
 		}
 	}
+	for _, v := range u.PartsPresetTags {
+		if err := exec(`INSERT INTO user_parts_preset_tags (user_id, user_parts_preset_tag_number, name, latest_version) VALUES (?,?,?,?)`,
+			uid, v.UserPartsPresetTagNumber, v.Name, v.LatestVersion); err != nil {
+			return err
+		}
+	}
 	for _, v := range u.PartsStatusSubs {
 		if err := exec(`INSERT INTO user_parts_status_subs (user_id, user_parts_uuid, status_index, parts_status_sub_lottery_id, level, status_kind_type, status_calculation_type, status_change_value, latest_version) VALUES (?,?,?,?,?,?,?,?,?)`,
 			uid, v.UserPartsUuid, v.StatusIndex, v.PartsStatusSubLotteryId, v.Level, v.StatusKindType, v.StatusCalculationType, v.StatusChangeValue, v.LatestVersion); err != nil {
@@ -862,6 +868,10 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 		func(v store.PartsPresetState) []any {
 			return []any{v.UserPartsPresetNumber, v.UserPartsUuid01, v.UserPartsUuid02, v.UserPartsUuid03, v.Name, v.UserPartsPresetTagNumber, v.LatestVersion}
 		}, "user_parts_preset_number, user_parts_uuid01, user_parts_uuid02, user_parts_uuid03, name, user_parts_preset_tag_number, latest_version")
+	diffMapInt32(tx, uid, before.PartsPresetTags, after.PartsPresetTags, "user_parts_preset_tags", "user_parts_preset_tag_number",
+		func(v store.PartsPresetTagState) []any {
+			return []any{v.UserPartsPresetTagNumber, v.Name, v.LatestVersion}
+		}, "user_parts_preset_tag_number, name, latest_version")
 
 	for k, v := range after.PartsStatusSubs {
 		if old, ok := before.PartsStatusSubs[k]; !ok || old != v {

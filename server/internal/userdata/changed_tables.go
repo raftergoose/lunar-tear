@@ -163,6 +163,9 @@ func ChangedTables(before, after *store.UserState) []string {
 	if !mapsEqualStruct(before.PartsPresets, after.PartsPresets) {
 		add("IUserPartsPreset")
 	}
+	if !mapsEqualStruct(before.PartsPresetTags, after.PartsPresetTags) {
+		add("IUserPartsPresetTag")
+	}
 	if !mapsEqualStruct(before.PartsStatusSubs, after.PartsStatusSubs) {
 		add("IUserPartsStatusSub")
 	}
@@ -419,6 +422,8 @@ func keyFieldsForTable(table string) []string {
 		return []string{"userId", "partsGroupId"}
 	case "IUserPartsPreset":
 		return []string{"userId", "userPartsPresetNumber"}
+	case "IUserPartsPresetTag":
+		return []string{"userId", "userPartsPresetTagNumber"}
 	case "IUserCageOrnamentReward":
 		return []string{"userId", "cageOrnamentId"}
 	case "IUserAutoSaleSettingDetail":

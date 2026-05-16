@@ -61,6 +61,7 @@ func initMaps(u *store.UserState) {
 	u.Parts = make(map[string]store.PartsState)
 	u.PartsGroupNotes = make(map[int32]store.PartsGroupNoteState)
 	u.PartsPresets = make(map[int32]store.PartsPresetState)
+	u.PartsPresetTags = make(map[int32]store.PartsPresetTagState)
 	u.PartsStatusSubs = make(map[store.PartsStatusSubKey]store.PartsStatusSubState)
 	u.DeckTypeNotes = make(map[model.DeckType]store.DeckTypeNoteState)
 	u.ConsumableItems = make(map[int32]int32)
@@ -490,6 +491,14 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 			rows.Scan(&v.UserPartsPresetNumber, &v.UserPartsUuid01, &v.UserPartsUuid02, &v.UserPartsUuid03,
 				&v.Name, &v.UserPartsPresetTagNumber, &v.LatestVersion)
 			u.PartsPresets[v.UserPartsPresetNumber] = v
+		})
+
+	queryRows(db, `SELECT user_parts_preset_tag_number, name, latest_version
+		FROM user_parts_preset_tags WHERE user_id=?`, uid,
+		func(rows *sql.Rows) {
+			var v store.PartsPresetTagState
+			rows.Scan(&v.UserPartsPresetTagNumber, &v.Name, &v.LatestVersion)
+			u.PartsPresetTags[v.UserPartsPresetTagNumber] = v
 		})
 
 	queryRows(db, `SELECT user_parts_uuid, status_index, parts_status_sub_lottery_id, level,

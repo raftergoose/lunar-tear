@@ -82,6 +82,7 @@ type UserState struct {
 	Parts                 map[string]PartsState
 	PartsGroupNotes       map[int32]PartsGroupNoteState
 	PartsPresets          map[int32]PartsPresetState
+	PartsPresetTags       map[int32]PartsPresetTagState
 	PartsStatusSubs       map[PartsStatusSubKey]PartsStatusSubState
 	ImportantItems        map[int32]int32
 	CostumeActiveSkills   map[string]CostumeActiveSkillState
@@ -205,6 +206,9 @@ func (u *UserState) EnsureMaps() {
 	}
 	if u.PartsPresets == nil {
 		u.PartsPresets = make(map[int32]PartsPresetState)
+	}
+	if u.PartsPresetTags == nil {
+		u.PartsPresetTags = make(map[int32]PartsPresetTagState)
 	}
 	if u.PartsStatusSubs == nil {
 		u.PartsStatusSubs = make(map[PartsStatusSubKey]PartsStatusSubState)
@@ -887,6 +891,12 @@ type PartsPresetState struct {
 	UserPartsUuid03          string
 	Name                     string
 	UserPartsPresetTagNumber int32
+	LatestVersion            int64
+}
+
+type PartsPresetTagState struct {
+	UserPartsPresetTagNumber int32
+	Name                     string
 	LatestVersion            int64
 }
 

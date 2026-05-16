@@ -119,6 +119,7 @@ func (s *SQLiteStore) ImportUser(u *store.UserState) error {
 		"user_decks",
 		"user_deck_characters",
 		"user_parts_status_subs",
+		"user_parts_preset_tags",
 		"user_parts_presets",
 		"user_parts_group_notes",
 		"user_parts",

@@ -270,3 +270,102 @@ func (s *PartsServiceServer) ReplacePreset(ctx context.Context, req *pb.PartsRep
 
 	return &pb.PartsReplacePresetResponse{}, nil
 }
+
+func (s *PartsServiceServer) UpdatePresetName(ctx context.Context, req *pb.PartsUpdatePresetNameRequest) (*pb.PartsUpdatePresetNameResponse, error) {
+	log.Printf("[PartsService] UpdatePresetName: preset=%d name=%q", req.UserPartsPresetNumber, req.Name)
+
+	userId := CurrentUserId(ctx, s.users, s.sessions)
+	nowMillis := gametime.NowMillis()
+
+	_, err := s.users.UpdateUser(userId, func(user *store.UserState) {
+		preset := user.PartsPresets[req.UserPartsPresetNumber]
+		preset.UserPartsPresetNumber = req.UserPartsPresetNumber
+		preset.Name = req.Name
+		preset.LatestVersion = nowMillis
+		user.PartsPresets[req.UserPartsPresetNumber] = preset
+	})
+	if err != nil {
+		return nil, fmt.Errorf("parts update preset name: %w", err)
+	}
+
+	return &pb.PartsUpdatePresetNameResponse{}, nil
+}
+
+func (s *PartsServiceServer) UpdatePresetTagNumber(ctx context.Context, req *pb.PartsUpdatePresetTagNumberRequest) (*pb.PartsUpdatePresetTagNumberResponse, error) {
+	log.Printf("[PartsService] UpdatePresetTagNumber: preset=%d tag=%d", req.UserPartsPresetNumber, req.UserPartsPresetTagNumber)
+
+	userId := CurrentUserId(ctx, s.users, s.sessions)
+	nowMillis := gametime.NowMillis()
+
+	_, err := s.users.UpdateUser(userId, func(user *store.UserState) {
+		preset := user.PartsPresets[req.UserPartsPresetNumber]
+		preset.UserPartsPresetNumber = req.UserPartsPresetNumber
+		preset.UserPartsPresetTagNumber = req.UserPartsPresetTagNumber
+		preset.LatestVersion = nowMillis
+		user.PartsPresets[req.UserPartsPresetNumber] = preset
+	})
+	if err != nil {
+		return nil, fmt.Errorf("parts update preset tag number: %w", err)
+	}
+
+	return &pb.PartsUpdatePresetTagNumberResponse{}, nil
+}
+
+func (s *PartsServiceServer) UpdatePresetTagName(ctx context.Context, req *pb.PartsUpdatePresetTagNameRequest) (*pb.PartsUpdatePresetTagNameResponse, error) {
+	log.Printf("[PartsService] UpdatePresetTagName: tag=%d name=%q", req.UserPartsPresetTagNumber, req.Name)
+
+	userId := CurrentUserId(ctx, s.users, s.sessions)
+	nowMillis := gametime.NowMillis()
+
+	_, err := s.users.UpdateUser(userId, func(user *store.UserState) {
+		tag := user.PartsPresetTags[req.UserPartsPresetTagNumber]
+		tag.UserPartsPresetTagNumber = req.UserPartsPresetTagNumber
+		tag.Name = req.Name
+		tag.LatestVersion = nowMillis
+		user.PartsPresetTags[req.UserPartsPresetTagNumber] = tag
+	})
+	if err != nil {
+		return nil, fmt.Errorf("parts update preset tag name: %w", err)
+	}
+
+	return &pb.PartsUpdatePresetTagNameResponse{}, nil
+}
+
+func (s *PartsServiceServer) CopyPreset(ctx context.Context, req *pb.PartsCopyPresetRequest) (*pb.PartsCopyPresetResponse, error) {
+	log.Printf("[PartsService] CopyPreset: from=%d to=%d", req.FromUserPartsPresetNumber, req.ToUserPartsPresetNumber)
+
+	userId := CurrentUserId(ctx, s.users, s.sessions)
+	nowMillis := gametime.NowMillis()
+
+	_, err := s.users.UpdateUser(userId, func(user *store.UserState) {
+		from, ok := user.PartsPresets[req.FromUserPartsPresetNumber]
+		if !ok {
+			log.Printf("[PartsService] CopyPreset: source preset=%d not found, skipping", req.FromUserPartsPresetNumber)
+			return
+		}
+		to := from
+		to.UserPartsPresetNumber = req.ToUserPartsPresetNumber
+		to.LatestVersion = nowMillis
+		user.PartsPresets[req.ToUserPartsPresetNumber] = to
+	})
+	if err != nil {
+		return nil, fmt.Errorf("parts copy preset: %w", err)
+	}
+
+	return &pb.PartsCopyPresetResponse{}, nil
+}
+
+func (s *PartsServiceServer) RemovePreset(ctx context.Context, req *pb.PartsRemovePresetRequest) (*pb.PartsRemovePresetResponse, error) {
+	log.Printf("[PartsService] RemovePreset: preset=%d", req.UserPartsPresetNumber)
+
+	userId := CurrentUserId(ctx, s.users, s.sessions)
+
+	_, err := s.users.UpdateUser(userId, func(user *store.UserState) {
+		delete(user.PartsPresets, req.UserPartsPresetNumber)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("parts remove preset: %w", err)
+	}
+
+	return &pb.PartsRemovePresetResponse{}, nil
+}
