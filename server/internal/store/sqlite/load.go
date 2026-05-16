@@ -77,6 +77,7 @@ func initMaps(u *store.UserState) {
 	u.ShopReplaceableLineup = make(map[int32]store.UserShopReplaceableLineupState)
 	u.ExploreScores = make(map[int32]store.ExploreScoreState)
 	u.CageOrnamentRewards = make(map[int32]store.CageOrnamentRewardState)
+	u.TowerAccumulationRewards = make(map[int32]store.TowerAccumulationRewardState)
 	u.CharacterBoards = make(map[int32]store.CharacterBoardState)
 	u.CharacterBoardAbilities = make(map[store.CharacterBoardAbilityKey]store.CharacterBoardAbilityState)
 	u.CharacterBoardStatusUps = make(map[store.CharacterBoardStatusUpKey]store.CharacterBoardStatusUpState)
@@ -649,6 +650,13 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 		var v store.CageOrnamentRewardState
 		rows.Scan(&v.CageOrnamentId, &v.AcquisitionDatetime, &v.LatestVersion)
 		u.CageOrnamentRewards[v.CageOrnamentId] = v
+	})
+
+	queryRows(db, `SELECT event_quest_chapter_id, latest_reward_receive_quest_mission_clear_count, latest_version
+		FROM user_event_quest_tower_accumulation_rewards WHERE user_id=?`, uid, func(rows *sql.Rows) {
+		var v store.TowerAccumulationRewardState
+		rows.Scan(&v.EventQuestChapterId, &v.LatestRewardReceiveQuestMissionClearCount, &v.LatestVersion)
+		u.TowerAccumulationRewards[v.EventQuestChapterId] = v
 	})
 
 	queryRows(db, `SELECT shop_item_id, bought_count, latest_bought_count_changed_datetime, latest_version

@@ -50,6 +50,7 @@ type Catalogs struct {
 	Companion         *masterdata.CompanionCatalog
 	SideStory         *masterdata.SideStoryCatalog
 	BigHunt           *masterdata.BigHuntCatalog
+	Tower             *masterdata.TowerCatalog
 
 	// Catalog-derived handlers must rebuild on every reload because they
 	// embed/cache pointers to specific catalog instances.

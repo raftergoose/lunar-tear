@@ -454,6 +454,12 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 			return err
 		}
 	}
+	for _, v := range u.TowerAccumulationRewards {
+		if err := exec(`INSERT INTO user_event_quest_tower_accumulation_rewards (user_id, event_quest_chapter_id, latest_reward_receive_quest_mission_clear_count, latest_version) VALUES (?,?,?,?)`,
+			uid, v.EventQuestChapterId, v.LatestRewardReceiveQuestMissionClearCount, v.LatestVersion); err != nil {
+			return err
+		}
+	}
 	for _, v := range u.ShopItems {
 		if err := exec(`INSERT INTO user_shop_items (user_id, shop_item_id, bought_count, latest_bought_count_changed_datetime, latest_version) VALUES (?,?,?,?,?)`,
 			uid, v.ShopItemId, v.BoughtCount, v.LatestBoughtCountChangedDatetime, v.LatestVersion); err != nil {
@@ -994,6 +1000,11 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 			return []any{v.CageOrnamentId, v.AcquisitionDatetime, v.LatestVersion}
 		},
 		"cage_ornament_id, acquisition_datetime, latest_version")
+	diffMapInt32(tx, uid, before.TowerAccumulationRewards, after.TowerAccumulationRewards, "user_event_quest_tower_accumulation_rewards", "event_quest_chapter_id",
+		func(v store.TowerAccumulationRewardState) []any {
+			return []any{v.EventQuestChapterId, v.LatestRewardReceiveQuestMissionClearCount, v.LatestVersion}
+		},
+		"event_quest_chapter_id, latest_reward_receive_quest_mission_clear_count, latest_version")
 	diffMapInt32(tx, uid, before.ShopItems, after.ShopItems, "user_shop_items", "shop_item_id",
 		func(v store.UserShopItemState) []any {
 			return []any{v.ShopItemId, v.BoughtCount, v.LatestBoughtCountChangedDatetime, v.LatestVersion}

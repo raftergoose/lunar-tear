@@ -26,6 +26,7 @@ func CloneUserState(u UserState) UserState {
 		Unlocks:          maps.Clone(u.Gimmick.Unlocks),
 	}
 	out.CageOrnamentRewards = maps.Clone(u.CageOrnamentRewards)
+	out.TowerAccumulationRewards = maps.Clone(u.TowerAccumulationRewards)
 	out.ConsumableItems = maps.Clone(u.ConsumableItems)
 	out.Materials = maps.Clone(u.Materials)
 	out.Parts = maps.Clone(u.Parts)

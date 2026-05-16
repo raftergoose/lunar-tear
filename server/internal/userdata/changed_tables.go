@@ -263,6 +263,9 @@ func ChangedTables(before, after *store.UserState) []string {
 	if !mapsEqualStruct(before.CageOrnamentRewards, after.CageOrnamentRewards) {
 		add("IUserCageOrnamentReward")
 	}
+	if !mapsEqualStruct(before.TowerAccumulationRewards, after.TowerAccumulationRewards) {
+		add("IUserEventQuestTowerAccumulationReward")
+	}
 
 	if !mapsEqualStruct(before.BigHuntMaxScores, after.BigHuntMaxScores) {
 		add("IUserBigHuntMaxScore")
@@ -426,6 +429,8 @@ func keyFieldsForTable(table string) []string {
 		return []string{"userId", "userPartsPresetTagNumber"}
 	case "IUserCageOrnamentReward":
 		return []string{"userId", "cageOrnamentId"}
+	case "IUserEventQuestTowerAccumulationReward":
+		return []string{"userId", "eventQuestChapterId"}
 	case "IUserAutoSaleSettingDetail":
 		return []string{"userId", "possessionAutoSaleItemType"}
 	case "IUserCharacterRebirth":

@@ -219,11 +219,32 @@ func init() {
 		s, _ := utils.EncodeJSONMaps(records...)
 		return s
 	})
+	register("IUserEventQuestTowerAccumulationReward", func(user store.UserState) string {
+		if len(user.TowerAccumulationRewards) == 0 {
+			return "[]"
+		}
+		ids := make([]int, 0, len(user.TowerAccumulationRewards))
+		for id := range user.TowerAccumulationRewards {
+			ids = append(ids, int(id))
+		}
+		sort.Ints(ids)
+		records := make([]map[string]any, 0, len(ids))
+		for _, id := range ids {
+			st := user.TowerAccumulationRewards[int32(id)]
+			records = append(records, map[string]any{
+				"userId":              user.UserId,
+				"eventQuestChapterId": st.EventQuestChapterId,
+				"latestRewardReceiveQuestMissionClearCount": st.LatestRewardReceiveQuestMissionClearCount,
+				"latestVersion": st.LatestVersion,
+			})
+		}
+		s, _ := utils.EncodeJSONMaps(records...)
+		return s
+	})
 	registerStatic(
 		"IUserEventQuestDailyGroupCompleteReward",
 		"IUserEventQuestLabyrinthSeason",
 		"IUserEventQuestLabyrinthStage",
-		"IUserEventQuestTowerAccumulationReward",
 		"IUserQuestReplayFlowRewardGroup",
 		"IUserQuestAutoOrbit",
 		"IUserQuestSceneChoice",

@@ -63,47 +63,48 @@ type UserState struct {
 	Gacha         GachaState
 	Notifications NotificationState
 
-	Characters            map[int32]CharacterState
-	Costumes              map[string]CostumeState
-	Weapons               map[string]WeaponState
-	Companions            map[string]CompanionState
-	Thoughts              map[string]ThoughtState
-	DeckCharacters        map[string]DeckCharacterState
-	Decks                 map[DeckKey]DeckState
-	TripleDecks           map[DeckKey]TripleDeckState
-	Quests                map[int32]UserQuestState
-	QuestMissions         map[QuestMissionKey]UserQuestMissionState
-	Missions              map[int32]UserMissionState
-	WeaponStories         map[int32]WeaponStoryState
-	Gimmick               GimmickState
-	CageOrnamentRewards   map[int32]CageOrnamentRewardState
-	ConsumableItems       map[int32]int32
-	Materials             map[int32]int32
-	Parts                 map[string]PartsState
-	PartsGroupNotes       map[int32]PartsGroupNoteState
-	PartsPresets          map[int32]PartsPresetState
-	PartsPresetTags       map[int32]PartsPresetTagState
-	PartsStatusSubs       map[PartsStatusSubKey]PartsStatusSubState
-	ImportantItems        map[int32]int32
-	CostumeActiveSkills   map[string]CostumeActiveSkillState
-	WeaponSkills          map[string][]WeaponSkillState   // key: userWeaponUuid
-	WeaponAbilities       map[string][]WeaponAbilityState // key: userWeaponUuid
-	WeaponAwakens         map[string]WeaponAwakenState    // key: userWeaponUuid
-	DeckTypeNotes         map[model.DeckType]DeckTypeNoteState
-	WeaponNotes           map[int32]WeaponNoteState
-	DeckSubWeapons        map[string][]string
-	DeckParts             map[string][]string
-	NaviCutInPlayed       map[int32]bool
-	ViewedMovies          map[int32]int64
-	ContentsStories       map[int32]int64
-	DrawnOmikuji          map[int32]int64
-	PremiumItems          map[int32]int64
-	DokanConfirmed        map[int32]bool
-	PortalCageStatus      PortalCageStatusState
-	GuerrillaFreeOpen     GuerrillaFreeOpenState
-	ShopItems             map[int32]UserShopItemState
-	ShopReplaceable       UserShopReplaceableState
-	ShopReplaceableLineup map[int32]UserShopReplaceableLineupState
+	Characters               map[int32]CharacterState
+	Costumes                 map[string]CostumeState
+	Weapons                  map[string]WeaponState
+	Companions               map[string]CompanionState
+	Thoughts                 map[string]ThoughtState
+	DeckCharacters           map[string]DeckCharacterState
+	Decks                    map[DeckKey]DeckState
+	TripleDecks              map[DeckKey]TripleDeckState
+	Quests                   map[int32]UserQuestState
+	QuestMissions            map[QuestMissionKey]UserQuestMissionState
+	Missions                 map[int32]UserMissionState
+	WeaponStories            map[int32]WeaponStoryState
+	Gimmick                  GimmickState
+	CageOrnamentRewards      map[int32]CageOrnamentRewardState
+	TowerAccumulationRewards map[int32]TowerAccumulationRewardState
+	ConsumableItems          map[int32]int32
+	Materials                map[int32]int32
+	Parts                    map[string]PartsState
+	PartsGroupNotes          map[int32]PartsGroupNoteState
+	PartsPresets             map[int32]PartsPresetState
+	PartsPresetTags          map[int32]PartsPresetTagState
+	PartsStatusSubs          map[PartsStatusSubKey]PartsStatusSubState
+	ImportantItems           map[int32]int32
+	CostumeActiveSkills      map[string]CostumeActiveSkillState
+	WeaponSkills             map[string][]WeaponSkillState   // key: userWeaponUuid
+	WeaponAbilities          map[string][]WeaponAbilityState // key: userWeaponUuid
+	WeaponAwakens            map[string]WeaponAwakenState    // key: userWeaponUuid
+	DeckTypeNotes            map[model.DeckType]DeckTypeNoteState
+	WeaponNotes              map[int32]WeaponNoteState
+	DeckSubWeapons           map[string][]string
+	DeckParts                map[string][]string
+	NaviCutInPlayed          map[int32]bool
+	ViewedMovies             map[int32]int64
+	ContentsStories          map[int32]int64
+	DrawnOmikuji             map[int32]int64
+	PremiumItems             map[int32]int64
+	DokanConfirmed           map[int32]bool
+	PortalCageStatus         PortalCageStatusState
+	GuerrillaFreeOpen        GuerrillaFreeOpenState
+	ShopItems                map[int32]UserShopItemState
+	ShopReplaceable          UserShopReplaceableState
+	ShopReplaceableLineup    map[int32]UserShopReplaceableLineupState
 
 	Explore       ExploreState
 	ExploreScores map[int32]ExploreScoreState
@@ -191,6 +192,9 @@ func (u *UserState) EnsureMaps() {
 	}
 	if u.CageOrnamentRewards == nil {
 		u.CageOrnamentRewards = make(map[int32]CageOrnamentRewardState)
+	}
+	if u.TowerAccumulationRewards == nil {
+		u.TowerAccumulationRewards = make(map[int32]TowerAccumulationRewardState)
 	}
 	if u.ConsumableItems == nil {
 		u.ConsumableItems = make(map[int32]int32)
@@ -866,6 +870,12 @@ type CageOrnamentRewardState struct {
 	CageOrnamentId      int32
 	AcquisitionDatetime int64
 	LatestVersion       int64
+}
+
+type TowerAccumulationRewardState struct {
+	EventQuestChapterId                       int32
+	LatestRewardReceiveQuestMissionClearCount int32
+	LatestVersion                             int64
 }
 
 type PartsState struct {
