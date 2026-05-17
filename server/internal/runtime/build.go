@@ -141,6 +141,8 @@ func buildCatalogs() (*Catalogs, error) {
 
 	towerCatalog := masterdata.LoadTowerCatalog()
 
+	labyrinthCatalog := masterdata.LoadLabyrinthCatalog()
+
 	return &Catalogs{
 		GameConfig:        gameConfig,
 		Parts:             partsCatalog,
@@ -167,6 +169,7 @@ func buildCatalogs() (*Catalogs, error) {
 		SideStory:         sideStoryCatalog,
 		BigHunt:           bigHuntCatalog,
 		Tower:             towerCatalog,
+		Labyrinth:         labyrinthCatalog,
 		QuestHandler:      questHandler,
 		GachaHandler:      gachaHandler,
 	}, nil

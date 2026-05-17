@@ -243,8 +243,6 @@ func init() {
 	})
 	registerStatic(
 		"IUserEventQuestDailyGroupCompleteReward",
-		"IUserEventQuestLabyrinthSeason",
-		"IUserEventQuestLabyrinthStage",
 		"IUserQuestReplayFlowRewardGroup",
 		"IUserQuestAutoOrbit",
 		"IUserQuestSceneChoice",

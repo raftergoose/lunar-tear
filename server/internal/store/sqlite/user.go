@@ -79,6 +79,8 @@ func (s *SQLiteStore) ImportUser(u *store.UserState) error {
 
 	// Child tables in reverse-dependency order (matches schema's goose Down).
 	childTables := []string{
+		"user_event_quest_labyrinth_stages",
+		"user_event_quest_labyrinth_seasons",
 		"user_event_quest_tower_accumulation_rewards",
 		"user_cage_ornament_rewards",
 		"user_shop_replaceable_lineup",

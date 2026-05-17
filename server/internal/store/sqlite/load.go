@@ -78,6 +78,8 @@ func initMaps(u *store.UserState) {
 	u.ExploreScores = make(map[int32]store.ExploreScoreState)
 	u.CageOrnamentRewards = make(map[int32]store.CageOrnamentRewardState)
 	u.TowerAccumulationRewards = make(map[int32]store.TowerAccumulationRewardState)
+	u.LabyrinthSeasons = make(map[int32]store.LabyrinthSeasonState)
+	u.LabyrinthStages = make(map[store.LabyrinthStageKey]store.LabyrinthStageState)
 	u.CharacterBoards = make(map[int32]store.CharacterBoardState)
 	u.CharacterBoardAbilities = make(map[store.CharacterBoardAbilityKey]store.CharacterBoardAbilityState)
 	u.CharacterBoardStatusUps = make(map[store.CharacterBoardStatusUpKey]store.CharacterBoardStatusUpState)
@@ -657,6 +659,22 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 		var v store.TowerAccumulationRewardState
 		rows.Scan(&v.EventQuestChapterId, &v.LatestRewardReceiveQuestMissionClearCount, &v.LatestVersion)
 		u.TowerAccumulationRewards[v.EventQuestChapterId] = v
+	})
+
+	queryRows(db, `SELECT event_quest_chapter_id, last_join_season_number, last_season_reward_received_season_number, latest_version
+		FROM user_event_quest_labyrinth_seasons WHERE user_id=?`, uid, func(rows *sql.Rows) {
+		var v store.LabyrinthSeasonState
+		rows.Scan(&v.EventQuestChapterId, &v.LastJoinSeasonNumber, &v.LastSeasonRewardReceivedSeasonNumber, &v.LatestVersion)
+		u.LabyrinthSeasons[v.EventQuestChapterId] = v
+	})
+
+	queryRows(db, `SELECT event_quest_chapter_id, stage_order, is_received_stage_clear_reward, accumulation_reward_received_quest_mission_count, latest_version
+		FROM user_event_quest_labyrinth_stages WHERE user_id=?`, uid, func(rows *sql.Rows) {
+		var v store.LabyrinthStageState
+		var rcvd int
+		rows.Scan(&v.EventQuestChapterId, &v.StageOrder, &rcvd, &v.AccumulationRewardReceivedQuestMissionCount, &v.LatestVersion)
+		v.IsReceivedStageClearReward = rcvd != 0
+		u.LabyrinthStages[store.LabyrinthStageKey{EventQuestChapterId: v.EventQuestChapterId, StageOrder: v.StageOrder}] = v
 	})
 
 	queryRows(db, `SELECT shop_item_id, bought_count, latest_bought_count_changed_datetime, latest_version

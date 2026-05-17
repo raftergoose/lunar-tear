@@ -12,10 +12,6 @@ const (
 	QuestFlowTypeAnotherRouteReplayFlow QuestFlowType = 4
 )
 
-// IsReplayQuestFlowType reports whether the flow type indicates an active
-// replay session — either same-route REPLAY_FLOW or cross-route
-// ANOTHER_ROUTE_REPLAY_FLOW. Mirrors the client's Story.IsReplayQuestFlowType
-// predicate (dump.cs:768202).
 func IsReplayQuestFlowType(t int32) bool {
 	return t == int32(QuestFlowTypeReplayFlow) ||
 		t == int32(QuestFlowTypeAnotherRouteReplayFlow)
@@ -170,7 +166,6 @@ const (
 
 type SideStorySceneIdType int32
 
-// Values mirror SideStoryTypes.SceneIdTypes in the client (dump.cs).
 const (
 	SideStorySceneInvalid                SideStorySceneIdType = 0
 	SideStorySceneIntroduction           SideStorySceneIdType = 1

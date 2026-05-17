@@ -460,6 +460,18 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 			return err
 		}
 	}
+	for _, v := range u.LabyrinthSeasons {
+		if err := exec(`INSERT INTO user_event_quest_labyrinth_seasons (user_id, event_quest_chapter_id, last_join_season_number, last_season_reward_received_season_number, latest_version) VALUES (?,?,?,?,?)`,
+			uid, v.EventQuestChapterId, v.LastJoinSeasonNumber, v.LastSeasonRewardReceivedSeasonNumber, v.LatestVersion); err != nil {
+			return err
+		}
+	}
+	for k, v := range u.LabyrinthStages {
+		if err := exec(`INSERT INTO user_event_quest_labyrinth_stages (user_id, event_quest_chapter_id, stage_order, is_received_stage_clear_reward, accumulation_reward_received_quest_mission_count, latest_version) VALUES (?,?,?,?,?,?)`,
+			uid, k.EventQuestChapterId, k.StageOrder, boolToInt(v.IsReceivedStageClearReward), v.AccumulationRewardReceivedQuestMissionCount, v.LatestVersion); err != nil {
+			return err
+		}
+	}
 	for _, v := range u.ShopItems {
 		if err := exec(`INSERT INTO user_shop_items (user_id, shop_item_id, bought_count, latest_bought_count_changed_datetime, latest_version) VALUES (?,?,?,?,?)`,
 			uid, v.ShopItemId, v.BoughtCount, v.LatestBoughtCountChangedDatetime, v.LatestVersion); err != nil {
@@ -1005,6 +1017,22 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 			return []any{v.EventQuestChapterId, v.LatestRewardReceiveQuestMissionClearCount, v.LatestVersion}
 		},
 		"event_quest_chapter_id, latest_reward_receive_quest_mission_clear_count, latest_version")
+	diffMapInt32(tx, uid, before.LabyrinthSeasons, after.LabyrinthSeasons, "user_event_quest_labyrinth_seasons", "event_quest_chapter_id",
+		func(v store.LabyrinthSeasonState) []any {
+			return []any{v.EventQuestChapterId, v.LastJoinSeasonNumber, v.LastSeasonRewardReceivedSeasonNumber, v.LatestVersion}
+		},
+		"event_quest_chapter_id, last_join_season_number, last_season_reward_received_season_number, latest_version")
+	for k, v := range after.LabyrinthStages {
+		if old, ok := before.LabyrinthStages[k]; !ok || old != v {
+			exec(`INSERT OR REPLACE INTO user_event_quest_labyrinth_stages (user_id, event_quest_chapter_id, stage_order, is_received_stage_clear_reward, accumulation_reward_received_quest_mission_count, latest_version) VALUES (?,?,?,?,?,?)`,
+				uid, k.EventQuestChapterId, k.StageOrder, boolToInt(v.IsReceivedStageClearReward), v.AccumulationRewardReceivedQuestMissionCount, v.LatestVersion)
+		}
+	}
+	for k := range before.LabyrinthStages {
+		if _, ok := after.LabyrinthStages[k]; !ok {
+			exec(`DELETE FROM user_event_quest_labyrinth_stages WHERE user_id=? AND event_quest_chapter_id=? AND stage_order=?`, uid, k.EventQuestChapterId, k.StageOrder)
+		}
+	}
 	diffMapInt32(tx, uid, before.ShopItems, after.ShopItems, "user_shop_items", "shop_item_id",
 		func(v store.UserShopItemState) []any {
 			return []any{v.ShopItemId, v.BoughtCount, v.LatestBoughtCountChangedDatetime, v.LatestVersion}

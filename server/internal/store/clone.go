@@ -27,6 +27,8 @@ func CloneUserState(u UserState) UserState {
 	}
 	out.CageOrnamentRewards = maps.Clone(u.CageOrnamentRewards)
 	out.TowerAccumulationRewards = maps.Clone(u.TowerAccumulationRewards)
+	out.LabyrinthSeasons = maps.Clone(u.LabyrinthSeasons)
+	out.LabyrinthStages = maps.Clone(u.LabyrinthStages)
 	out.ConsumableItems = maps.Clone(u.ConsumableItems)
 	out.Materials = maps.Clone(u.Materials)
 	out.Parts = maps.Clone(u.Parts)

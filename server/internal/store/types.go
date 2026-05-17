@@ -78,6 +78,8 @@ type UserState struct {
 	Gimmick                  GimmickState
 	CageOrnamentRewards      map[int32]CageOrnamentRewardState
 	TowerAccumulationRewards map[int32]TowerAccumulationRewardState
+	LabyrinthSeasons         map[int32]LabyrinthSeasonState
+	LabyrinthStages          map[LabyrinthStageKey]LabyrinthStageState
 	ConsumableItems          map[int32]int32
 	Materials                map[int32]int32
 	Parts                    map[string]PartsState
@@ -195,6 +197,12 @@ func (u *UserState) EnsureMaps() {
 	}
 	if u.TowerAccumulationRewards == nil {
 		u.TowerAccumulationRewards = make(map[int32]TowerAccumulationRewardState)
+	}
+	if u.LabyrinthSeasons == nil {
+		u.LabyrinthSeasons = make(map[int32]LabyrinthSeasonState)
+	}
+	if u.LabyrinthStages == nil {
+		u.LabyrinthStages = make(map[LabyrinthStageKey]LabyrinthStageState)
 	}
 	if u.ConsumableItems == nil {
 		u.ConsumableItems = make(map[int32]int32)
@@ -876,6 +884,27 @@ type TowerAccumulationRewardState struct {
 	EventQuestChapterId                       int32
 	LatestRewardReceiveQuestMissionClearCount int32
 	LatestVersion                             int64
+}
+
+type LabyrinthSeasonState struct {
+	EventQuestChapterId                  int32
+	LastJoinSeasonNumber                 int32
+	LastSeasonRewardReceivedSeasonNumber int32
+	LatestVersion                        int64
+}
+
+// LabyrinthStageKey is the composite key for UserState.LabyrinthStages.
+type LabyrinthStageKey struct {
+	EventQuestChapterId int32
+	StageOrder          int32
+}
+
+type LabyrinthStageState struct {
+	EventQuestChapterId                         int32
+	StageOrder                                  int32
+	IsReceivedStageClearReward                  bool
+	AccumulationRewardReceivedQuestMissionCount int32
+	LatestVersion                               int64
 }
 
 type PartsState struct {
