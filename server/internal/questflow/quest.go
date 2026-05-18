@@ -24,7 +24,14 @@ func (h *QuestHandler) initQuestState(user *store.UserState, questId int32) {
 }
 
 func isMainQuestPlayable(quest masterdata.EntityMQuest) bool {
-	return !quest.IsRunInTheBackground && quest.IsCountedAsQuest
+	if quest.IsRunInTheBackground {
+		// A background quest is still actively played — and must NOT be
+		// auto-cleared on start — when it carries battle content (a non-zero
+		// recommended deck power, e.g. quests 500/515/30515). Pure cutscene
+		// background quests have RecommendedDeckPower == 0.
+		return quest.RecommendedDeckPower > 0
+	}
+	return quest.IsCountedAsQuest
 }
 
 func (h *QuestHandler) clearQuestMissions(user *store.UserState, questId int32, nowMillis int64) {
