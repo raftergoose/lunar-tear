@@ -46,7 +46,6 @@ func (h *QuestHandler) advanceMainFlowScene(user *store.UserState, questId, scen
 		user.MainQuest.CurrentMainQuestRouteId = routeId
 		if seasonId, ok := h.SeasonIdByRouteId[routeId]; ok {
 			user.MainQuest.MainQuestSeasonId = seasonId
-			RecordSeasonRoute(user, seasonId, routeId, gametime.NowMillis())
 		}
 	}
 }
@@ -59,22 +58,27 @@ func (h *QuestHandler) advanceReplayFlowScene(user *store.UserState, sceneId int
 	user.MainQuest.ReplayFlowHeadQuestSceneId = sceneId
 }
 
-func RecordSeasonRoute(user *store.UserState, seasonId, routeId int32, nowMillis int64) {
-	if seasonId <= 0 || routeId <= 0 {
-		return
+func (h *QuestHandler) SeasonRoutesFor(user *store.UserState) map[int32]int32 {
+	out := make(map[int32]int32)
+	for seasonId, routes := range h.RoutesBySeason {
+		if seasonId <= 1 {
+			continue
+		}
+		for _, routeId := range routes {
+			finalQuestId, ok := h.RouteCompletionQuestId[routeId]
+			if !ok {
+				continue
+			}
+			if q, ok := user.Quests[finalQuestId]; ok && q.ClearCount > 0 {
+				out[seasonId] = routeId
+				break
+			}
+		}
 	}
-	if user.MainQuestSeasonRoutes == nil {
-		user.MainQuestSeasonRoutes = make(map[store.SeasonRouteKey]store.SeasonRouteEntry)
+	if cur := user.MainQuest.MainQuestSeasonId; cur >= 2 && user.MainQuest.CurrentMainQuestRouteId > 0 {
+		out[cur] = user.MainQuest.CurrentMainQuestRouteId
 	}
-	key := store.SeasonRouteKey{MainQuestSeasonId: seasonId, MainQuestRouteId: routeId}
-	if _, exists := user.MainQuestSeasonRoutes[key]; exists {
-		return
-	}
-	user.MainQuestSeasonRoutes[key] = store.SeasonRouteEntry{
-		MainQuestSeasonId: seasonId,
-		MainQuestRouteId:  routeId,
-		LatestVersion:     nowMillis,
-	}
+	return out
 }
 
 func (h *QuestHandler) HandleMainFlowSceneProgress(user *store.UserState, questSceneId int32, nowMillis int64) {
@@ -177,15 +181,8 @@ func (h *QuestHandler) replayFlowTypeForRoute(user *store.UserState, routeId int
 	if !ok {
 		return model.QuestFlowTypeReplayFlow
 	}
-	for key, entry := range user.MainQuestSeasonRoutes {
-		if key.MainQuestSeasonId == seasonId && entry.MainQuestRouteId != routeId {
-			return model.QuestFlowTypeAnotherRouteReplayFlow
-		}
-	}
-	if len(user.MainQuestSeasonRoutes) == 0 &&
-		user.MainQuest.MainQuestSeasonId == seasonId &&
-		user.MainQuest.CurrentMainQuestRouteId != 0 &&
-		user.MainQuest.CurrentMainQuestRouteId != routeId {
+	pairs := h.SeasonRoutesFor(user)
+	if recorded, ok := pairs[seasonId]; ok && recorded != routeId {
 		return model.QuestFlowTypeAnotherRouteReplayFlow
 	}
 	return model.QuestFlowTypeReplayFlow

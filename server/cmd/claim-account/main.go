@@ -40,6 +40,7 @@ var childTables = []string{
 	"user_big_hunt_max_scores",
 	"user_quest_limit_content_status",
 	"user_side_story_quests",
+	"user_main_quest_season_routes",
 	"user_missions",
 	"user_quest_missions",
 	"user_quests",

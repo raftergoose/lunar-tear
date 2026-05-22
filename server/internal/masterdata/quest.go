@@ -34,6 +34,8 @@ type QuestCatalog struct {
 	TutorialUnlockConditions           []EntityMTutorialUnlockCondition
 	ChapterLastSceneByQuestId          map[int32]int32
 	SeasonIdByRouteId                  map[int32]int32
+	RoutesBySeason                     map[int32][]int32
+	RouteCompletionQuestId             map[int32]int32
 	BattleOnlyTargetSceneByQuestId     map[int32]int32
 
 	UserExpThresholds       []int32
@@ -114,8 +116,53 @@ func LoadQuestCatalog(partsCatalog *PartsCatalog) (*QuestCatalog, error) {
 		return nil, fmt.Errorf("load main quest route table: %w", err)
 	}
 	seasonIdByRouteId := make(map[int32]int32, len(routes))
+	routesBySeason := make(map[int32][]int32, len(routes))
+	sortOrderByRoute := make(map[int32]int32, len(routes))
 	for _, r := range routes {
 		seasonIdByRouteId[r.MainQuestRouteId] = r.MainQuestSeasonId
+		routesBySeason[r.MainQuestSeasonId] = append(routesBySeason[r.MainQuestSeasonId], r.MainQuestRouteId)
+		sortOrderByRoute[r.MainQuestRouteId] = r.SortOrder
+	}
+	for seasonId, ids := range routesBySeason {
+		s := ids
+		sort.Slice(s, func(i, j int) bool { return sortOrderByRoute[s[i]] > sortOrderByRoute[s[j]] })
+		routesBySeason[seasonId] = s
+	}
+
+	anotherReplayConds, err := utils.ReadTable[EntityMMainQuestRouteAnotherReplayFlowUnlockCondition]("m_main_quest_route_another_replay_flow_unlock_condition")
+	if err != nil {
+		return nil, fmt.Errorf("load main quest route another replay flow unlock condition table: %w", err)
+	}
+	evaluateConds, err := utils.ReadTable[EntityMEvaluateCondition]("m_evaluate_condition")
+	if err != nil {
+		return nil, fmt.Errorf("load evaluate condition table: %w", err)
+	}
+	valueGroupByConditionId := make(map[int32]int32, len(evaluateConds))
+	for _, c := range evaluateConds {
+		valueGroupByConditionId[c.EvaluateConditionId] = c.EvaluateConditionValueGroupId
+	}
+	evaluateValueGroups, err := utils.ReadTable[EntityMEvaluateConditionValueGroup]("m_evaluate_condition_value_group")
+	if err != nil {
+		return nil, fmt.Errorf("load evaluate condition value group table: %w", err)
+	}
+	valueByGroupId := make(map[int32]int32, len(evaluateValueGroups))
+	for _, vg := range evaluateValueGroups {
+		if _, exists := valueByGroupId[vg.EvaluateConditionValueGroupId]; exists {
+			continue
+		}
+		valueByGroupId[vg.EvaluateConditionValueGroupId] = int32(vg.Value)
+	}
+	routeCompletionQuestId := make(map[int32]int32, len(anotherReplayConds))
+	for _, c := range anotherReplayConds {
+		valueGroupId, ok := valueGroupByConditionId[c.UnlockEvaluateConditionId]
+		if !ok {
+			continue
+		}
+		questId, ok := valueByGroupId[valueGroupId]
+		if !ok {
+			continue
+		}
+		routeCompletionQuestId[c.MainQuestRouteId] = questId
 	}
 
 	firstClearSwitches, err := utils.ReadTable[EntityMQuestFirstClearRewardSwitch]("m_quest_first_clear_reward_switch")
@@ -539,6 +586,8 @@ func LoadQuestCatalog(partsCatalog *PartsCatalog) (*QuestCatalog, error) {
 		TutorialUnlockConditions:           tutorialUnlockConds,
 		ChapterLastSceneByQuestId:          chapterLastSceneByQuestId,
 		SeasonIdByRouteId:                  seasonIdByRouteId,
+		RoutesBySeason:                     routesBySeason,
+		RouteCompletionQuestId:             routeCompletionQuestId,
 		BattleOnlyTargetSceneByQuestId:     battleOnlyTargetSceneByQuestId,
 
 		UserExpThresholds:       BuildExpThresholds(paramMapRows, 1),

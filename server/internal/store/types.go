@@ -41,7 +41,6 @@ type UserState struct {
 	LoginBonus              UserLoginBonusState
 	Tutorials               map[int32]TutorialProgressState
 	MainQuest               MainQuestState
-	MainQuestSeasonRoutes   map[SeasonRouteKey]SeasonRouteEntry
 	EventQuest              EventQuestState
 	ExtraQuest              ExtraQuestState
 	SideStoryQuests         map[int32]SideStoryQuestProgress
@@ -161,9 +160,6 @@ func (u *UserState) EnsureMaps() {
 	}
 	if u.SideStoryQuests == nil {
 		u.SideStoryQuests = make(map[int32]SideStoryQuestProgress)
-	}
-	if u.MainQuestSeasonRoutes == nil {
-		u.MainQuestSeasonRoutes = make(map[SeasonRouteKey]SeasonRouteEntry)
 	}
 	if u.QuestLimitContentStatus == nil {
 		u.QuestLimitContentStatus = make(map[int32]QuestLimitContentStatus)
@@ -588,17 +584,6 @@ type SideStoryActiveProgress struct {
 	CurrentSideStoryQuestId      int32
 	CurrentSideStoryQuestSceneId int32
 	LatestVersion                int64
-}
-
-type SeasonRouteKey struct {
-	MainQuestSeasonId int32
-	MainQuestRouteId  int32
-}
-
-type SeasonRouteEntry struct {
-	MainQuestSeasonId int32
-	MainQuestRouteId  int32
-	LatestVersion     int64
 }
 
 type QuestLimitContentStatus struct {

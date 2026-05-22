@@ -86,7 +86,6 @@ func initMaps(u *store.UserState) {
 	u.CharacterRebirths = make(map[int32]store.CharacterRebirthState)
 	u.AutoSaleSettings = make(map[int32]store.AutoSaleSettingState)
 	u.SideStoryQuests = make(map[int32]store.SideStoryQuestProgress)
-	u.MainQuestSeasonRoutes = make(map[store.SeasonRouteKey]store.SeasonRouteEntry)
 	u.QuestLimitContentStatus = make(map[int32]store.QuestLimitContentStatus)
 	u.BigHuntMaxScores = make(map[int32]store.BigHuntMaxScore)
 	u.BigHuntStatuses = make(map[int32]store.BigHuntStatus)
@@ -375,16 +374,6 @@ func loadMapTables(db *sql.DB, uid int64, u *store.UserState) {
 		rows.Scan(&id, &head, &st, &lv)
 		u.SideStoryQuests[id] = store.SideStoryQuestProgress{
 			HeadSideStoryQuestSceneId: head, SideStoryQuestStateType: model.SideStoryQuestStateType(st), LatestVersion: lv,
-		}
-	})
-
-	queryRows(db, `SELECT main_quest_season_id, main_quest_route_id, latest_version
-		FROM user_main_quest_season_routes WHERE user_id=?`, uid, func(rows *sql.Rows) {
-		var seasonId, routeId int32
-		var lv int64
-		rows.Scan(&seasonId, &routeId, &lv)
-		u.MainQuestSeasonRoutes[store.SeasonRouteKey{MainQuestSeasonId: seasonId, MainQuestRouteId: routeId}] = store.SeasonRouteEntry{
-			MainQuestSeasonId: seasonId, MainQuestRouteId: routeId, LatestVersion: lv,
 		}
 	})
 

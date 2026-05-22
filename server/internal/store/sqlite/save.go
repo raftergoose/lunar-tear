@@ -224,12 +224,6 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 			return err
 		}
 	}
-	for k, v := range u.MainQuestSeasonRoutes {
-		if err := exec(`INSERT INTO user_main_quest_season_routes (user_id, main_quest_season_id, main_quest_route_id, latest_version) VALUES (?,?,?,?)`,
-			uid, k.MainQuestSeasonId, k.MainQuestRouteId, v.LatestVersion); err != nil {
-			return err
-		}
-	}
 	for id, v := range u.QuestLimitContentStatus {
 		if err := exec(`INSERT INTO user_quest_limit_content_status (user_id, limit_content_id, limit_content_quest_status_type, event_quest_chapter_id, latest_version) VALUES (?,?,?,?,?)`,
 			uid, id, v.LimitContentQuestStatusType, v.EventQuestChapterId, v.LatestVersion); err != nil {
@@ -798,17 +792,6 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 			return []any{0, v.HeadSideStoryQuestSceneId, int32(v.SideStoryQuestStateType), v.LatestVersion}
 		}, "side_story_quest_id, head_side_story_quest_scene_id, side_story_quest_state_type, latest_version")
 
-	for k, v := range after.MainQuestSeasonRoutes {
-		if old, ok := before.MainQuestSeasonRoutes[k]; !ok || old != v {
-			exec(`INSERT OR REPLACE INTO user_main_quest_season_routes (user_id, main_quest_season_id, main_quest_route_id, latest_version) VALUES (?,?,?,?)`,
-				uid, k.MainQuestSeasonId, k.MainQuestRouteId, v.LatestVersion)
-		}
-	}
-	for k := range before.MainQuestSeasonRoutes {
-		if _, ok := after.MainQuestSeasonRoutes[k]; !ok {
-			exec(`DELETE FROM user_main_quest_season_routes WHERE user_id=? AND main_quest_season_id=? AND main_quest_route_id=?`, uid, k.MainQuestSeasonId, k.MainQuestRouteId)
-		}
-	}
 	diffMapInt32(tx, uid, before.QuestLimitContentStatus, after.QuestLimitContentStatus, "user_quest_limit_content_status", "limit_content_id",
 		func(v store.QuestLimitContentStatus) []any {
 			return []any{0, v.LimitContentQuestStatusType, v.EventQuestChapterId, v.LatestVersion}

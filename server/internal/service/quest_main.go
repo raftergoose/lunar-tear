@@ -198,7 +198,6 @@ func (s *QuestServiceServer) SetRoute(ctx context.Context, req *pb.SetRouteReque
 		user.MainQuest.CurrentMainQuestRouteId = req.MainQuestRouteId
 		if seasonId, ok := engine.SeasonIdByRouteId[req.MainQuestRouteId]; ok {
 			user.MainQuest.MainQuestSeasonId = seasonId
-			questflow.RecordSeasonRoute(user, seasonId, req.MainQuestRouteId, gametime.NowMillis())
 		}
 		now := gametime.NowMillis()
 		user.PortalCageStatus.IsCurrentProgress = false

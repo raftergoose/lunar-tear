@@ -3,12 +3,19 @@ package userdata
 import (
 	"sort"
 
+	"lunar-tear/server/internal/questflow"
 	"lunar-tear/server/internal/store"
 )
 
 type Projector func(user store.UserState) string
 
 var projectors = make(map[string]Projector)
+
+var questHandler *questflow.QuestHandler
+
+func SetQuestHandler(h *questflow.QuestHandler) {
+	questHandler = h
+}
 
 func register(tableName string, fn Projector) {
 	projectors[tableName] = fn

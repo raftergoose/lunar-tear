@@ -8,6 +8,7 @@ import (
 	"lunar-tear/server/internal/masterdata"
 	"lunar-tear/server/internal/masterdata/memorydb"
 	"lunar-tear/server/internal/questflow"
+	"lunar-tear/server/internal/userdata"
 )
 
 // buildCatalogs runs the full Load*/Build*/Enrich* sequence against whatever
@@ -35,6 +36,7 @@ func buildCatalogs() (*Catalogs, error) {
 	}
 	sideStoryCatalog := masterdata.LoadSideStoryCatalog()
 	questHandler := questflow.NewQuestHandler(questCatalog, gameConfig, sideStoryCatalog)
+	userdata.SetQuestHandler(questHandler)
 
 	gachaEntries, medalInfo, err := masterdata.LoadGachaCatalog()
 	if err != nil {

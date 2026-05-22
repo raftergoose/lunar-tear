@@ -101,8 +101,9 @@ func ChangedTables(before, after *store.UserState) []string {
 		add("IUserMainQuestMainFlowStatus")
 		add("IUserMainQuestProgressStatus")
 		add("IUserMainQuestReplayFlowStatus")
-	}
-	if !mapsEqualStruct(before.MainQuestSeasonRoutes, after.MainQuestSeasonRoutes) {
+		// IUserMainQuestSeasonRoute is derived from MainQuest + Quests at projection
+		// time (see proj_quest.go / questflow.QuestHandler.SeasonRoutesFor) — flag it
+		// whenever either of those upstream inputs changes.
 		add("IUserMainQuestSeasonRoute")
 	}
 	if before.EventQuest != after.EventQuest {
@@ -202,6 +203,7 @@ func ChangedTables(before, after *store.UserState) []string {
 	}
 	if !mapsEqualStruct(before.Quests, after.Quests) {
 		add("IUserQuest")
+		add("IUserMainQuestSeasonRoute")
 	}
 	if !mapsEqualStruct(before.QuestMissions, after.QuestMissions) {
 		add("IUserQuestMission")
