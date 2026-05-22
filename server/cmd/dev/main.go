@@ -120,8 +120,12 @@ func main() {
 		colorCyan = ""
 	}
 
-	log.Println("building services...")
-	buildAll()
+	if _, err := os.Stat("go.mod"); err == nil {
+		log.Println("building services...")
+		buildAll()
+	} else {
+		log.Println("prebuilt mode: skipping build, using bin/ from archive")
+	}
 
 	ext := binExt()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

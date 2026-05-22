@@ -74,14 +74,21 @@ func main() {
 
 	fmt.Print(banner)
 
+	sourceMode = isSourceCheckout()
+
 	if !*setupOnly {
 		validateAssets()
-		validateTools()
-		validateProtocIncludes()
-		runProtoc()
-		backupGameDB()
-		runMigrate()
-		downloadDeps()
+		if sourceMode {
+			validateTools()
+			validateProtocIncludes()
+			runProtoc()
+			backupGameDB()
+			runMigrate()
+			downloadDeps()
+		} else {
+			backupGameDB()
+			runMigrateEmbedded()
+		}
 	}
 
 	ip, cfg, firstRun := resolveIP(*preferSaved)
@@ -901,13 +908,15 @@ func launchDev(ip string, p ports) {
 	}
 	devBin := filepath.Join("bin", "dev"+ext)
 
-	_ = spinner.New().Title("  Building services...").Action(func() {
-		if err := os.MkdirAll("bin", 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "  Failed to create bin/: %v\n", err)
-			os.Exit(1)
-		}
-		runQuiet(exec.Command("go", "build", "-o", devBin, "./cmd/dev"), "build dev")
-	}).Run()
+	if sourceMode {
+		_ = spinner.New().Title("  Building services...").Action(func() {
+			if err := os.MkdirAll("bin", 0755); err != nil {
+				fmt.Fprintf(os.Stderr, "  Failed to create bin/: %v\n", err)
+				os.Exit(1)
+			}
+			runQuiet(exec.Command("go", "build", "-o", devBin, "./cmd/dev"), "build dev")
+		}).Run()
+	}
 
 	devArgs := []string{
 		"--grpc.listen", fmt.Sprintf("0.0.0.0:%d", p.GRPC),

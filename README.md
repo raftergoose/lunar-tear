@@ -5,7 +5,14 @@ Discord server: https://discord.gg/MZAf5aVkJG
 
 ## How To Launch The Server
 
-### Prerequisites
+### Download & Run (no setup)
+
+Prebuilt binaries are published for Linux, macOS, and Windows on the [Releases page](https://github.com/Walter-Sparrow/lunar-tear/releases).
+
+1. Download the archive for your OS/arch (`lunar-tear-server-<version>-<os>-<arch>.{tar.gz,zip}`).
+2. Run `./wizard` (macOS/Linux) or double-click `wizard.exe` (Windows).
+
+### Prerequisites (build from source)
 
 - Go 1.25+
 - [goose](https://github.com/pressly/goose) migration tool
@@ -40,12 +47,12 @@ By default the wizard uses ports 8003 (gRPC), 8080 (CDN), and 3000 (auth). Overr
 go run ./cmd/wizard --grpc-port 9003 --cdn-port 9080
 ```
 
-| Flag             | Default | Description                        |
-| ---------------- | ------- | ---------------------------------- |
-| `--prefer-saved` | `false` | Reuse saved config without prompting |
-| `--grpc-port`    | `8003`  | gRPC server port                   |
-| `--cdn-port`     | `8080`  | CDN server port                    |
-| `--auth-port`    | `3000`  | Auth server port                   |
+| Flag             | Default | Description                                                                                                              |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--prefer-saved` | `false` | Reuse saved config without prompting                                                                                     |
+| `--grpc-port`    | `8003`  | gRPC server port                                                                                                         |
+| `--cdn-port`     | `8080`  | CDN server port                                                                                                          |
+| `--auth-port`    | `3000`  | Auth server port                                                                                                         |
 | `--admin-port`   | `0`     | Admin webhook port (`0` = disabled). Bound on `127.0.0.1`; only takes effect when `LUNAR_ADMIN_TOKEN` is set in the env. |
 
 Custom ports are saved to `.wizard.json` alongside your other settings. On the next run the saved ports are reused automatically — no need to pass the flags again. If you later pass different port flags, the wizard warns you that the ports changed and asks for confirmation before continuing.
@@ -105,9 +112,9 @@ go run ./cmd/import-snapshot \
 
 | Flag         | Default      | Description                                   |
 | ------------ | ------------ | --------------------------------------------- |
-| `--snapshot` | *(required)* | Path to JSON snapshot file                     |
-| `--uuid`     | *(required)* | UUID to assign (must match the client's UUID)  |
-| `--db`       | `db/game.db` | SQLite database path                           |
+| `--snapshot` | _(required)_ | Path to JSON snapshot file                    |
+| `--uuid`     | _(required)_ | UUID to assign (must match the client's UUID) |
+| `--db`       | `db/game.db` | SQLite database path                          |
 
 ### Run
 
@@ -174,40 +181,40 @@ Or via `make`:
 make dev ARGS="--grpc.listen 0.0.0.0:9000 --grpc.public-addr 10.0.2.2:9000"
 ```
 
-| Flag                  | Default            | Description                              |
-| --------------------- | ------------------ | ---------------------------------------- |
-| `--auth.listen`       | `0.0.0.0:3000`     | auth-server listen address               |
-| `--auth.db`           | `db/auth.db`       | auth-server SQLite database path         |
-| `--cdn.listen`        | `0.0.0.0:8080`     | octo-cdn local bind address              |
-| `--cdn.public-addr`   | `10.0.2.2:8080`    | octo-cdn externally-reachable addr       |
-| `--grpc.listen`       | `0.0.0.0:8003`     | lunar-tear gRPC listen address           |
-| `--grpc.public-addr`  | `10.0.2.2:8003`    | lunar-tear externally-reachable addr     |
-| `--grpc.octo-url`     | `http://10.0.2.2:8080` | Octo CDN base URL passed to lunar-tear |
-| `--grpc.auth-url`     | `http://localhost:3000` | auth server base URL passed to lunar-tear |
-| `--no-register`       | `false`            | disable new user registrations (only already registered users can connect). |
-| `--admin.listen`      | *(empty)*          | lunar-tear admin webhook bind. Empty = leave default; webhook only binds when `LUNAR_ADMIN_TOKEN` is set in the env. |
-| `--no-color`          | `false`            | disable colored output                   |
+| Flag                 | Default                 | Description                                                                                                          |
+| -------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `--auth.listen`      | `0.0.0.0:3000`          | auth-server listen address                                                                                           |
+| `--auth.db`          | `db/auth.db`            | auth-server SQLite database path                                                                                     |
+| `--cdn.listen`       | `0.0.0.0:8080`          | octo-cdn local bind address                                                                                          |
+| `--cdn.public-addr`  | `10.0.2.2:8080`         | octo-cdn externally-reachable addr                                                                                   |
+| `--grpc.listen`      | `0.0.0.0:8003`          | lunar-tear gRPC listen address                                                                                       |
+| `--grpc.public-addr` | `10.0.2.2:8003`         | lunar-tear externally-reachable addr                                                                                 |
+| `--grpc.octo-url`    | `http://10.0.2.2:8080`  | Octo CDN base URL passed to lunar-tear                                                                               |
+| `--grpc.auth-url`    | `http://localhost:3000` | auth server base URL passed to lunar-tear                                                                            |
+| `--no-register`      | `false`                 | disable new user registrations (only already registered users can connect).                                          |
+| `--admin.listen`     | _(empty)_               | lunar-tear admin webhook bind. Empty = leave default; webhook only binds when `LUNAR_ADMIN_TOKEN` is set in the env. |
+| `--no-color`         | `false`                 | disable colored output                                                                                               |
 
 ### Ports
 
-| Protocol | Port | Binary        | Notes                                                       |
-| -------- | ---- | ------------- | ----------------------------------------------------------- |
-| gRPC     | 443  | `lunar-tear`  | default; configurable with `--listen` (requires patched client) |
-| HTTP     | 8080 | `octo-cdn`    | Octo asset API + game web pages                             |
+| Protocol | Port | Binary        | Notes                                                                                                            |
+| -------- | ---- | ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| gRPC     | 443  | `lunar-tear`  | default; configurable with `--listen` (requires patched client)                                                  |
+| HTTP     | 8080 | `octo-cdn`    | Octo asset API + game web pages                                                                                  |
 | HTTP     | 8082 | `lunar-tear`  | admin webhook (`/api/admin/master-data/reload`); loopback by default, only binds when `LUNAR_ADMIN_TOKEN` is set |
-| HTTP     | 3000 | `auth-server` | account registration and login                              |
+| HTTP     | 3000 | `auth-server` | account registration and login                                                                                   |
 
 ### Game Server Flags (`lunar-tear`)
 
-| Flag             | Default           | Description                                          |
-| ---------------- | ----------------- | ---------------------------------------------------- |
-| `--listen`       | `0.0.0.0:443`     | gRPC listen address (host:port)                      |
-| `--public-addr`  | `127.0.0.1:443`   | externally-reachable host:port advertised to clients  |
-| `--octo-url`     | *(required)*      | CDN base URL the client uses for assets (e.g. `http://10.0.2.2:8080`) |
-| `--db`           | `db/game.db`      | SQLite database path                                 |
-| `--auth-url`     | *(empty)*         | Auth server base URL (e.g. `http://localhost:3000`)  |
-| `--admin-listen` | `127.0.0.1:8082`  | Admin webhook listen address. Only binds when `LUNAR_ADMIN_TOKEN` is set. |
-| `--no-register`  | `false`           | Disable new user registrations (only already registered users can connect). |
+| Flag             | Default          | Description                                                                 |
+| ---------------- | ---------------- | --------------------------------------------------------------------------- |
+| `--listen`       | `0.0.0.0:443`    | gRPC listen address (host:port)                                             |
+| `--public-addr`  | `127.0.0.1:443`  | externally-reachable host:port advertised to clients                        |
+| `--octo-url`     | _(required)_     | CDN base URL the client uses for assets (e.g. `http://10.0.2.2:8080`)       |
+| `--db`           | `db/game.db`     | SQLite database path                                                        |
+| `--auth-url`     | _(empty)_        | Auth server base URL (e.g. `http://localhost:3000`)                         |
+| `--admin-listen` | `127.0.0.1:8082` | Admin webhook listen address. Only binds when `LUNAR_ADMIN_TOKEN` is set.   |
+| `--no-register`  | `false`          | Disable new user registrations (only already registered users can connect). |
 
 ### Live Master Data Reload
 
@@ -231,11 +238,11 @@ Security defaults are fail-closed:
 
 ### CDN Flags (`octo-cdn`)
 
-| Flag            | Default           | Description                                              |
-| --------------- | ----------------- | -------------------------------------------------------- |
-| `--listen`      | `0.0.0.0:8080`    | local bind address                                       |
-| `--public-addr` | `127.0.0.1:8080`  | externally-reachable address (used in list.bin rewriting) |
-| `--assets-dir`  | `.`               | root directory containing the `assets/` tree             |
+| Flag            | Default          | Description                                               |
+| --------------- | ---------------- | --------------------------------------------------------- |
+| `--listen`      | `0.0.0.0:8080`   | local bind address                                        |
+| `--public-addr` | `127.0.0.1:8080` | externally-reachable address (used in list.bin rewriting) |
+| `--assets-dir`  | `.`              | root directory containing the `assets/` tree              |
 
 ### Docker
 
@@ -250,22 +257,22 @@ The `db/` directory is mounted as a volume so both `game.db` and `auth.db` persi
 
 Each service has its own image and can be deployed independently:
 
-| Service  | Image                       | Default Port | Notes                          |
-| -------- | --------------------------- | ------------ | ------------------------------ |
+| Service  | Image                       | Default Port | Notes                            |
+| -------- | --------------------------- | ------------ | -------------------------------- |
 | `server` | `kretts/lunar-tear:latest`  | 8003, 8082   | gRPC game server + admin webhook |
-| `cdn`    | `kretts/octo-cdn:latest`    | 8080         | HTTP asset CDN                 |
-| `auth`   | `kretts/auth-server:latest` | 3000         | Account registration and login |
+| `cdn`    | `kretts/octo-cdn:latest`    | 8080         | HTTP asset CDN                   |
+| `auth`   | `kretts/auth-server:latest` | 3000         | Account registration and login   |
 
 The game server is configured via environment variables in the compose file:
 
-| Env var               | Description                                                                                  |
-| --------------------- | -------------------------------------------------------------------------------------------- |
-| `LUNAR_LISTEN`        | gRPC bind address                                                                            |
-| `LUNAR_PUBLIC_ADDR`   | Client-facing address advertised to the game                                                 |
-| `LUNAR_OCTO_URL`      | CDN base URL the client uses for assets                                                      |
-| `LUNAR_AUTH_URL`      | Auth server base URL (optional)                                                              |
-| `LUNAR_ADMIN_LISTEN`  | Admin webhook bind address inside the container (compose default: `0.0.0.0:8082`)            |
-| `LUNAR_ADMIN_TOKEN`   | Bearer token for the admin webhook. **The webhook does not bind unless this is set.**        |
+| Env var              | Description                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `LUNAR_LISTEN`       | gRPC bind address                                                                     |
+| `LUNAR_PUBLIC_ADDR`  | Client-facing address advertised to the game                                          |
+| `LUNAR_OCTO_URL`     | CDN base URL the client uses for assets                                               |
+| `LUNAR_AUTH_URL`     | Auth server base URL (optional)                                                       |
+| `LUNAR_ADMIN_LISTEN` | Admin webhook bind address inside the container (compose default: `0.0.0.0:8082`)     |
+| `LUNAR_ADMIN_TOKEN`  | Bearer token for the admin webhook. **The webhook does not bind unless this is set.** |
 
 Auth is optional — if `LUNAR_AUTH_URL` is unset the game server starts without it. The admin webhook is published to `127.0.0.1:8082` on the host so the master-data reload endpoint stays loopback-only by default; set `LUNAR_ADMIN_TOKEN` (e.g. via a `.env` file) before bringing the stack up.
 
@@ -273,22 +280,22 @@ Auth is optional — if `LUNAR_AUTH_URL` is unset the game server starts without
 
 All targets run from the `server/` directory.
 
-| Target         | Description                                             |
-| -------------- | ------------------------------------------------------- |
-| `make proto`   | Regenerate protobuf stubs                               |
-| `make build`   | Build the game server binary                            |
-| `make build-cdn` | Build the CDN binary                                  |
-| `make build-auth` | Build the auth server binary                          |
-| `make build-dev` | Build the dev runner binary to `bin/`                  |
-| `make build-all` | Build all service binaries to `bin/`                   |
-| `make build-import` | Build the import-snapshot tool                     |
-| `make build-claim-account` | Build the claim-account tool                |
-| `make build-register-account` | Build the register-account tool           |
-| `make clean`   | Remove the `bin/` directory                              |
-| `make dev`     | Run all three services with one command                  |
-| `make migrate` | Run goose migrations on `db/game.db`                    |
-| `make restore` | Interactive restore of `db/game.db` from `db/backups/`   |
-| `make import`  | Import a snapshot (`SNAPSHOT=... UUID=...` required)     |
+| Target                        | Description                                            |
+| ----------------------------- | ------------------------------------------------------ |
+| `make proto`                  | Regenerate protobuf stubs                              |
+| `make build`                  | Build the game server binary                           |
+| `make build-cdn`              | Build the CDN binary                                   |
+| `make build-auth`             | Build the auth server binary                           |
+| `make build-dev`              | Build the dev runner binary to `bin/`                  |
+| `make build-all`              | Build all service binaries to `bin/`                   |
+| `make build-import`           | Build the import-snapshot tool                         |
+| `make build-claim-account`    | Build the claim-account tool                           |
+| `make build-register-account` | Build the register-account tool                        |
+| `make clean`                  | Remove the `bin/` directory                            |
+| `make dev`                    | Run all three services with one command                |
+| `make migrate`                | Run goose migrations on `db/game.db`                   |
+| `make restore`                | Interactive restore of `db/game.db` from `db/backups/` |
+| `make import`                 | Import a snapshot (`SNAPSHOT=... UUID=...` required)   |
 
 ## Claim Account
 
@@ -301,10 +308,10 @@ cd server
 go run ./cmd/claim-account --name "PlayerName" --db db/game.db
 ```
 
-| Flag     | Default      | Description                                          |
-| -------- | ------------ | ---------------------------------------------------- |
-| `--name` | *(required)* | In-game player name to claim                         |
-| `--db`   | `db/game.db` | SQLite database path                                 |
+| Flag     | Default      | Description                  |
+| -------- | ------------ | ---------------------------- |
+| `--name` | _(required)_ | In-game player name to claim |
+| `--db`   | `db/game.db` | SQLite database path         |
 
 ## Auth Server
 
@@ -323,12 +330,12 @@ The `--secret` flag accepts a hex-encoded HMAC key. If omitted, a random key is 
 
 ### Flags
 
-| Flag             | Default         | Description                                  |
-| ---------------- | --------------- | -------------------------------------------- |
-| `--listen`       | `0.0.0.0:3000`  | HTTP listen address (host:port)              |
-| `--db`           | `db/auth.db`    | SQLite database path for auth users          |
-| `--secret`       | *(generated)*   | Hex-encoded HMAC secret for token signing    |
-| `--no-register`  | `false`         | Disable new user registrations (only already registered users can log in). |
+| Flag            | Default        | Description                                                                |
+| --------------- | -------------- | -------------------------------------------------------------------------- |
+| `--listen`      | `0.0.0.0:3000` | HTTP listen address (host:port)                                            |
+| `--db`          | `db/auth.db`   | SQLite database path for auth users                                        |
+| `--secret`      | _(generated)_  | Hex-encoded HMAC secret for token signing                                  |
+| `--no-register` | `false`        | Disable new user registrations (only already registered users can log in). |
 
 ## Create account
 
@@ -339,13 +346,13 @@ A primary mean of registering new accounts when `--no-register` flag is passed t
 go run ./cmd/register-account --name "AccountName" --password "AccountPassword" --platform "android"
 ```
 
-| Flag         | Default      | Description                                                  |
-| ------------ | ------------ | ------------------------------------------------------------ |
-| `--name`     | *(required)* | Auth Server account nickname to be registered                |
-| `--password` | *(required)* | Auth Server account password to be registered                |
-| `--platform` | `android`    | Platform of new user account (`android` or `ios`)            |
-| `--db`       | `db/game.db` | SQLite main database path                                    |
-| `--auth-db`  | `db/auth.db` | SQLite Auth Server database path                             |
+| Flag         | Default      | Description                                       |
+| ------------ | ------------ | ------------------------------------------------- |
+| `--name`     | _(required)_ | Auth Server account nickname to be registered     |
+| `--password` | _(required)_ | Auth Server account password to be registered     |
+| `--platform` | `android`    | Platform of new user account (`android` or `ios`) |
+| `--db`       | `db/game.db` | SQLite main database path                         |
+| `--auth-db`  | `db/auth.db` | SQLite Auth Server database path                  |
 
 This only sets the nickname of Auth Server account, a player can choose their in-game nickname upon first login!
 
