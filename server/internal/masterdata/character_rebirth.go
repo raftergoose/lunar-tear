@@ -17,6 +17,25 @@ type CharacterRebirthCatalog struct {
 	MaterialsByGroupId     map[int32][]EntityMCharacterRebirthMaterialGroup
 }
 
+func (c *CharacterRebirthCatalog) CostumeLevelLimitUp(characterId, rebirthCount int32) int32 {
+	if c == nil || rebirthCount <= 0 {
+		return 0
+	}
+	stepGroupId, ok := c.StepGroupByCharacterId[characterId]
+	if !ok {
+		return 0
+	}
+	var total int32
+	for i := range rebirthCount {
+		step, ok := c.StepByGroupAndCount[StepKey{GroupId: stepGroupId, BeforeRebirthCount: i}]
+		if !ok {
+			continue
+		}
+		total += step.CostumeLevelLimitUp
+	}
+	return total
+}
+
 func LoadCharacterRebirthCatalog() (*CharacterRebirthCatalog, error) {
 	rebirthRows, err := utils.ReadTable[EntityMCharacterRebirth]("m_character_rebirth")
 	if err != nil {

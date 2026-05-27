@@ -197,8 +197,10 @@ func (h *QuestHandler) applyExpRewards(user *store.UserState, questId int32, now
 			if !ok {
 				continue
 			}
+			var maxLevel int32
 			if maxLevelFunc, hasMax := h.CostumeMaxLevelByRarity[cm.RarityType]; hasMax {
-				maxLevel := maxLevelFunc.Evaluate(row.LimitBreakCount)
+				maxLevel = maxLevelFunc.Evaluate(row.LimitBreakCount) +
+					h.CharacterRebirth.CostumeLevelLimitUp(cm.CharacterId, user.CharacterRebirths[cm.CharacterId].RebirthCount)
 				if row.Level >= maxLevel {
 					log.Printf("[applyExpRewards] questId=%d costume=%d (key=%s): at max level %d, skipping", questId, row.CostumeId, key, row.Level)
 					continue
@@ -206,14 +208,7 @@ func (h *QuestHandler) applyExpRewards(user *store.UserState, questId int32, now
 			}
 			row.Exp += questDef.CostumeExp
 			if thresholds, ok := h.CostumeExpByRarity[cm.RarityType]; ok {
-				row.Level, row.Exp = gameutil.LevelAndCap(row.Exp, thresholds)
-				if maxLevelFunc, hasMax := h.CostumeMaxLevelByRarity[cm.RarityType]; hasMax {
-					maxLevel := maxLevelFunc.Evaluate(row.LimitBreakCount)
-					if row.Level > maxLevel && int(maxLevel) < len(thresholds) {
-						row.Level = maxLevel
-						row.Exp = thresholds[maxLevel]
-					}
-				}
+				row.Level, row.Exp = gameutil.ApplyExpWithMaxLevel(row.Exp, thresholds, maxLevel)
 			}
 			user.Costumes[key] = row
 			log.Printf("[applyExpRewards] questId=%d costume=%d (key=%s): +%d exp -> total=%d level=%d", questId, row.CostumeId, key, questDef.CostumeExp, row.Exp, row.Level)

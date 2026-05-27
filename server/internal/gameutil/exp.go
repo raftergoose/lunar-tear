@@ -17,3 +17,16 @@ func LevelAndCap(exp int32, thresholds []int32) (level, capped int32) {
 	}
 	return level, exp
 }
+
+// ApplyExpWithMaxLevel runs LevelAndCap and then clamps the resulting
+// level to the per-instance maxLevel (e.g. limit break + awaken for
+// weapons, limit break + rebirth for costumes). A maxLevel <= 0 means
+// "no per-instance cap" and the result is identical to LevelAndCap.
+func ApplyExpWithMaxLevel(exp int32, thresholds []int32, maxLevel int32) (level, capped int32) {
+	level, capped = LevelAndCap(exp, thresholds)
+	if maxLevel > 0 && level > maxLevel && int(maxLevel) < len(thresholds) {
+		level = maxLevel
+		capped = thresholds[maxLevel]
+	}
+	return
+}

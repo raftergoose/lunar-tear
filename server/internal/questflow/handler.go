@@ -32,9 +32,10 @@ type QuestHandler struct {
 	Granter                        *store.PossessionGranter
 	SideStoryChapterByEventQuestId map[int32]int32
 	Campaigns                      *campaign.Catalog
+	CharacterRebirth               *masterdata.CharacterRebirthCatalog
 }
 
-func NewQuestHandler(catalog *masterdata.QuestCatalog, config *masterdata.GameConfig, sideStory *masterdata.SideStoryCatalog, campaigns *campaign.Catalog) *QuestHandler {
+func NewQuestHandler(catalog *masterdata.QuestCatalog, config *masterdata.GameConfig, sideStory *masterdata.SideStoryCatalog, campaigns *campaign.Catalog, characterRebirth *masterdata.CharacterRebirthCatalog) *QuestHandler {
 	granter := BuildGranter(catalog)
 	var sideStoryChapters map[int32]int32
 	if sideStory != nil {
@@ -46,6 +47,7 @@ func NewQuestHandler(catalog *masterdata.QuestCatalog, config *masterdata.GameCo
 		Granter:                        granter,
 		SideStoryChapterByEventQuestId: sideStoryChapters,
 		Campaigns:                      campaigns,
+		CharacterRebirth:               characterRebirth,
 	}
 }
 

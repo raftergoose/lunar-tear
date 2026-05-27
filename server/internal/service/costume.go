@@ -90,7 +90,12 @@ func (s *CostumeServiceServer) Enhance(ctx context.Context, req *pb.EnhanceReque
 		costume.Exp += totalExp
 
 		if thresholds, ok := catalog.ExpByRarity[cm.RarityType]; ok {
-			costume.Level, costume.Exp = gameutil.LevelAndCap(costume.Exp, thresholds)
+			var maxLevel int32
+			if maxLevelFunc, hasMax := catalog.MaxLevelByRarity[cm.RarityType]; hasMax {
+				maxLevel = maxLevelFunc.Evaluate(costume.LimitBreakCount) +
+					cat.CharacterRebirth.CostumeLevelLimitUp(cm.CharacterId, user.CharacterRebirths[cm.CharacterId].RebirthCount)
+			}
+			costume.Level, costume.Exp = gameutil.ApplyExpWithMaxLevel(costume.Exp, thresholds, maxLevel)
 		}
 
 		costume.LatestVersion = nowMillis

@@ -41,7 +41,12 @@ func buildCatalogs() (*Catalogs, error) {
 		return nil, fmt.Errorf("load campaign catalog: %w", err)
 	}
 	log.Printf("campaign catalog loaded: %d enhance, %d quest", campaignCatalog.EnhanceCount(), campaignCatalog.QuestCount())
-	questHandler := questflow.NewQuestHandler(questCatalog, gameConfig, sideStoryCatalog, campaignCatalog)
+	characterRebirthCatalog, err := masterdata.LoadCharacterRebirthCatalog()
+	if err != nil {
+		return nil, fmt.Errorf("load character rebirth catalog: %w", err)
+	}
+	log.Printf("character rebirth catalog loaded: %d characters", len(characterRebirthCatalog.StepGroupByCharacterId))
+	questHandler := questflow.NewQuestHandler(questCatalog, gameConfig, sideStoryCatalog, campaignCatalog, characterRebirthCatalog)
 	userdata.SetQuestHandler(questHandler)
 
 	gachaEntries, medalInfo, err := masterdata.LoadGachaCatalog()
@@ -132,12 +137,6 @@ func buildCatalogs() (*Catalogs, error) {
 		return nil, fmt.Errorf("load character board catalog: %w", err)
 	}
 	log.Printf("character board catalog loaded: %d panels, %d boards", len(characterBoardCatalog.PanelById), len(characterBoardCatalog.BoardById))
-
-	characterRebirthCatalog, err := masterdata.LoadCharacterRebirthCatalog()
-	if err != nil {
-		return nil, fmt.Errorf("load character rebirth catalog: %w", err)
-	}
-	log.Printf("character rebirth catalog loaded: %d characters", len(characterRebirthCatalog.StepGroupByCharacterId))
 
 	companionCatalog, err := masterdata.LoadCompanionCatalog()
 	if err != nil {
