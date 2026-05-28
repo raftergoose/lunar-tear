@@ -131,6 +131,9 @@ type PossessionGranter struct {
 	PartsSubStatusPool                   map[int32][]int32
 	PartsSubStatusDefs                   map[int32]PartsStatusSubDef
 
+	PartsSellPriceL1ByRarity map[int32]int32
+	GoldConsumableItemId     int32
+
 	LastChangedStoryWeaponIds []int32
 }
 
@@ -201,19 +204,51 @@ func (g *PossessionGranter) GrantCompanion(user *UserState, companionId int32, n
 }
 
 func (g *PossessionGranter) GrantParts(user *UserState, requestedPartsId int32, nowMillis int64) {
-	ref, refOk := g.PartsById[requestedPartsId]
-	if !refOk {
-		key := uuid.New().String()
-		user.Parts[key] = PartsState{
-			UserPartsUuid:       key,
-			PartsId:             requestedPartsId,
-			Level:               1,
-			AcquisitionDatetime: nowMillis,
-		}
-		log.Printf("[GrantParts] unknown partsId=%d, granted as-is with no variant roll", requestedPartsId)
+	chosenPartsId, chosenRef, ok := g.rollPartsVariant(requestedPartsId)
+	if !ok {
+		g.grantBareParts(user, requestedPartsId, nowMillis)
 		return
 	}
+	g.createParts(user, chosenPartsId, chosenRef, nowMillis)
+}
 
+// The rolled variant sets both rarity and rank, so the auto-sale decision can
+// only happen after the roll. Returns the rolled variant id and whether it sold.
+func (g *PossessionGranter) GrantOrSellPartsDrop(user *UserState, requestedPartsId int32, raritySet, rankSet map[int32]bool, nowMillis int64) (int32, bool) {
+	chosenPartsId, chosenRef, ok := g.rollPartsVariant(requestedPartsId)
+	if !ok {
+		g.grantBareParts(user, requestedPartsId, nowMillis)
+		return requestedPartsId, false
+	}
+	rarity := chosenRef.RarityType
+	rank := chosenRef.PartsInitialLotteryId
+	if price, ok := g.PartsSellPriceL1ByRarity[rarity]; ok && raritySet[rarity] && rankSet[rank] {
+		user.ConsumableItems[g.GoldConsumableItemId] += price
+		log.Printf("[GrantParts] auto-sold chosen=%d rarity=%d rank=%d -> %d gold", chosenPartsId, rarity, rank, price)
+		return chosenPartsId, true
+	}
+	g.createParts(user, chosenPartsId, chosenRef, nowMillis)
+	return chosenPartsId, false
+}
+
+func (g *PossessionGranter) grantBareParts(user *UserState, partsId int32, nowMillis int64) {
+	key := uuid.New().String()
+	user.Parts[key] = PartsState{
+		UserPartsUuid:       key,
+		PartsId:             partsId,
+		Level:               1,
+		AcquisitionDatetime: nowMillis,
+	}
+	log.Printf("[GrantParts] unknown partsId=%d, granted as-is with no variant roll", partsId)
+}
+
+// rollPartsVariant picks one of a parts group's 5 variants at random; the five
+// carry distinct PartsInitialLotteryId 1..5, which is the part's rank.
+func (g *PossessionGranter) rollPartsVariant(requestedPartsId int32) (int32, PartsRef, bool) {
+	ref, refOk := g.PartsById[requestedPartsId]
+	if !refOk {
+		return requestedPartsId, PartsRef{}, false
+	}
 	chosenPartsId := requestedPartsId
 	chosenRef := ref
 	if variants := g.PartsVariantsByGroupRarity[ref.PartsGroupId][ref.RarityType]; len(variants) == 5 {
@@ -222,7 +257,10 @@ func (g *PossessionGranter) GrantParts(user *UserState, requestedPartsId int32, 
 	} else {
 		log.Printf("[GrantParts] no 5-variant set for group=%d rarity=%d (have %d), granting requested=%d", ref.PartsGroupId, ref.RarityType, len(variants), requestedPartsId)
 	}
+	return chosenPartsId, chosenRef, true
+}
 
+func (g *PossessionGranter) createParts(user *UserState, chosenPartsId int32, chosenRef PartsRef, nowMillis int64) {
 	mainStatId := g.DefaultPartsStatusMainByLotteryGroup[chosenRef.PartsStatusMainLotteryGroupId]
 	if _, exists := user.PartsGroupNotes[chosenRef.PartsGroupId]; !exists {
 		user.PartsGroupNotes[chosenRef.PartsGroupId] = PartsGroupNoteState{
@@ -266,7 +304,7 @@ func (g *PossessionGranter) GrantParts(user *UserState, requestedPartsId int32, 
 		}
 	}
 
-	log.Printf("[GrantParts] requested=%d chosen=%d variant=%d group=%d rarity=%d preUnlockedSubs=%d", requestedPartsId, chosenPartsId, initialCount, chosenRef.PartsGroupId, chosenRef.RarityType, initialCount-1)
+	log.Printf("[GrantParts] chosen=%d group=%d rarity=%d preUnlockedSubs=%d", chosenPartsId, chosenRef.PartsGroupId, chosenRef.RarityType, initialCount-1)
 }
 
 func (g *PossessionGranter) GrantWeapon(user *UserState, weaponId int32, nowMillis int64) {

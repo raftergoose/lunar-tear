@@ -35,8 +35,9 @@ func (h *QuestHandler) HandleBigHuntQuestFinish(user *store.UserState, questId i
 	}
 
 	target := h.targetForBigHunt(questId)
-	outcome := h.evaluateFinishOutcome(user, questId, target, nowMillis)
-	if !isRetired {
+	var outcome FinishOutcome
+	if !isRetired && !isAnnihilated {
+		outcome = h.evaluateFinishOutcome(user, questId, target, nowMillis)
 		h.applyQuestVictory(user, questId, &outcome, nowMillis, false)
 	}
 

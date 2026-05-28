@@ -268,10 +268,26 @@ func init() {
 		s, _ := utils.EncodeJSONMaps(records...)
 		return s
 	})
+	register("IUserQuestAutoOrbit", func(user store.UserState) string {
+		s := user.QuestAutoOrbit
+		if s.MaxAutoOrbitCount <= 0 {
+			return "[]"
+		}
+		out, _ := utils.EncodeJSONMaps(map[string]any{
+			"userId":                user.UserId,
+			"questType":             s.QuestType,
+			"chapterId":             s.ChapterId,
+			"questId":               s.QuestId,
+			"maxAutoOrbitCount":     s.MaxAutoOrbitCount,
+			"clearedAutoOrbitCount": s.ClearedAutoOrbitCount,
+			"lastClearDatetime":     s.LastClearDatetime,
+			"latestVersion":         s.LatestVersion,
+		})
+		return out
+	})
 	registerStatic(
 		"IUserEventQuestDailyGroupCompleteReward",
 		"IUserQuestReplayFlowRewardGroup",
-		"IUserQuestAutoOrbit",
 		"IUserQuestSceneChoice",
 		"IUserQuestSceneChoiceHistory",
 	)

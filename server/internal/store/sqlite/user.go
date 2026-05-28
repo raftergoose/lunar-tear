@@ -95,6 +95,7 @@ func (s *SQLiteStore) ImportUser(u *store.UserState) error {
 		"user_viewed_movies",
 		"user_navi_cutin_played",
 		"user_auto_sale_settings",
+		"user_quest_auto_orbit",
 		"user_explore_scores",
 		"user_tutorials",
 		"user_premium_items",

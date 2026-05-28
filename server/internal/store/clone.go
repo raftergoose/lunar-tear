@@ -85,6 +85,7 @@ func CloneUserState(u UserState) UserState {
 	out.CostumeLotteryEffectPending = maps.Clone(u.CostumeLotteryEffectPending)
 	out.AutoSaleSettings = maps.Clone(u.AutoSaleSettings)
 	out.CharacterRebirths = maps.Clone(u.CharacterRebirths)
+	out.QuestAutoOrbit.AccumulatedDrops = append([]AutoOrbitDropEntry(nil), u.QuestAutoOrbit.AccumulatedDrops...)
 	return out
 }
 

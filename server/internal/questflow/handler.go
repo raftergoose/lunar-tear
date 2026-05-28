@@ -13,6 +13,7 @@ type RewardGrant struct {
 	PossessionType model.PossessionType
 	PossessionId   int32
 	Count          int32
+	IsAutoSale     bool
 }
 
 type FinishOutcome struct {
@@ -36,7 +37,7 @@ type QuestHandler struct {
 }
 
 func NewQuestHandler(catalog *masterdata.QuestCatalog, config *masterdata.GameConfig, sideStory *masterdata.SideStoryCatalog, campaigns *campaign.Catalog, characterRebirth *masterdata.CharacterRebirthCatalog) *QuestHandler {
-	granter := BuildGranter(catalog)
+	granter := BuildGranter(catalog, config)
 	var sideStoryChapters map[int32]int32
 	if sideStory != nil {
 		sideStoryChapters = sideStory.ChapterByEventQuestId
@@ -51,7 +52,7 @@ func NewQuestHandler(catalog *masterdata.QuestCatalog, config *masterdata.GameCo
 	}
 }
 
-func BuildGranter(catalog *masterdata.QuestCatalog) *store.PossessionGranter {
+func BuildGranter(catalog *masterdata.QuestCatalog, config *masterdata.GameConfig) *store.PossessionGranter {
 	costumeById := make(map[int32]store.CostumeRef, len(catalog.CostumeById))
 	for id, cm := range catalog.CostumeById {
 		costumeById[id] = store.CostumeRef{CharacterId: cm.CharacterId}
@@ -111,6 +112,15 @@ func BuildGranter(catalog *masterdata.QuestCatalog) *store.PossessionGranter {
 		}
 	}
 
+	partsSellPriceL1 := make(map[int32]int32, len(catalog.SellPriceByRarity))
+	for rarity, fn := range catalog.SellPriceByRarity {
+		partsSellPriceL1[int32(rarity)] = fn.Evaluate(1)
+	}
+	var goldItemId int32
+	if config != nil {
+		goldItemId = config.ConsumableItemIdForGold
+	}
+
 	return &store.PossessionGranter{
 		CostumeById:                          costumeById,
 		WeaponById:                           weaponById,
@@ -122,5 +132,7 @@ func BuildGranter(catalog *masterdata.QuestCatalog) *store.PossessionGranter {
 		PartsVariantsByGroupRarity:           partsVariants,
 		PartsSubStatusPool:                   catalog.SubStatusPool,
 		PartsSubStatusDefs:                   partsSubDefs,
+		PartsSellPriceL1ByRarity:             partsSellPriceL1,
+		GoldConsumableItemId:                 goldItemId,
 	}
 }

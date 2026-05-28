@@ -119,6 +119,7 @@ type UserState struct {
 	CostumeLotteryEffectPending map[string]CostumeLotteryEffectPendingState // key: userCostumeUuid
 	AutoSaleSettings            map[int32]AutoSaleSettingState
 	CharacterRebirths           map[int32]CharacterRebirthState
+	QuestAutoOrbit              QuestAutoOrbitState
 }
 
 func (u *UserState) EnsureMaps() {
@@ -329,6 +330,45 @@ type GuerrillaFreeOpenState struct {
 	OpenMinutes      int32
 	DailyOpenedCount int32
 	LatestVersion    int64
+}
+
+type AutoOrbitDropEntry struct {
+	PossessionType int32
+	PossessionId   int32
+	Count          int32
+	IsAutoSale     bool
+}
+
+type QuestAutoOrbitState struct {
+	QuestType             int32
+	ChapterId             int32
+	QuestId               int32
+	MaxAutoOrbitCount     int32
+	ClearedAutoOrbitCount int32
+	LastClearDatetime     int64
+	LatestVersion         int64
+	AccumulatedDrops      []AutoOrbitDropEntry
+}
+
+func (s QuestAutoOrbitState) Equal(other QuestAutoOrbitState) bool {
+	if s.QuestType != other.QuestType ||
+		s.ChapterId != other.ChapterId ||
+		s.QuestId != other.QuestId ||
+		s.MaxAutoOrbitCount != other.MaxAutoOrbitCount ||
+		s.ClearedAutoOrbitCount != other.ClearedAutoOrbitCount ||
+		s.LastClearDatetime != other.LastClearDatetime ||
+		s.LatestVersion != other.LatestVersion {
+		return false
+	}
+	if len(s.AccumulatedDrops) != len(other.AccumulatedDrops) {
+		return false
+	}
+	for i := range s.AccumulatedDrops {
+		if s.AccumulatedDrops[i] != other.AccumulatedDrops[i] {
+			return false
+		}
+	}
+	return true
 }
 
 type PortalCageStatusState struct {

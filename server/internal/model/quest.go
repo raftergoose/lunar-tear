@@ -2,6 +2,16 @@ package model
 
 import "fmt"
 
+type QuestType int32
+
+const (
+	QuestTypeUnknown QuestType = 0
+	QuestTypeMain    QuestType = 1
+	QuestTypeEvent   QuestType = 2
+	QuestTypeExtra   QuestType = 3
+	QuestTypeBigHunt QuestType = 4
+)
+
 type QuestFlowType int32
 
 const (

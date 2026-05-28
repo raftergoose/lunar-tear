@@ -204,9 +204,8 @@ func (h *QuestHandler) applyQuestVictory(user *store.UserState, questId int32, o
 		}
 		questState.IsRewardGranted = true
 	}
-	for _, drop := range outcome.DropRewards {
-		h.applyRewardPossession(user, drop.PossessionType, drop.PossessionId, drop.Count, nowMillis)
-	}
+	raritySet, rankSet := parseAutoSaleRules(user.AutoSaleSettings)
+	h.grantDropRewards(user, outcome.DropRewards, raritySet, rankSet, nowMillis)
 	for _, reward := range outcome.ReplayFlowFirstClearRewards {
 		h.applyRewardPossession(user, reward.PossessionType, reward.PossessionId, reward.Count, nowMillis)
 	}
@@ -260,11 +259,12 @@ func (h *QuestHandler) HandleQuestFinish(user *store.UserState, questId int32, i
 
 	h.initQuestState(user, questId)
 
-	outcome := h.evaluateFinishOutcome(user, questId, h.targetForMain(questId), nowMillis)
 	wasReplay := model.IsReplayQuestFlowType(user.MainQuest.CurrentQuestFlowType)
 	wasMenuReplay := user.MainQuest.SavedContext.Active
 
-	if !isRetired {
+	var outcome FinishOutcome
+	if !isRetired && !isAnnihilated {
+		outcome = h.evaluateFinishOutcome(user, questId, h.targetForMain(questId), nowMillis)
 		h.applyQuestVictory(user, questId, &outcome, nowMillis, wasReplay)
 
 		// A replay-flow finish must NOT move the MainFlow scene pointer: the
@@ -334,12 +334,11 @@ func (h *QuestHandler) HandleQuestSkip(user *store.UserState, questId, skipCount
 	if user.ConsumableItems[skipTicketId] < 0 {
 		user.ConsumableItems[skipTicketId] = 0
 	}
+	raritySet, rankSet := parseAutoSaleRules(user.AutoSaleSettings)
 	var allDrops []RewardGrant
 	for range skipCount {
 		drops := h.computeDropRewards(questDef, target, nowMillis)
-		for _, drop := range drops {
-			h.applyRewardPossession(user, drop.PossessionType, drop.PossessionId, drop.Count, nowMillis)
-		}
+		h.grantDropRewards(user, drops, raritySet, rankSet, nowMillis)
 		allDrops = append(allDrops, drops...)
 
 		if questDef.Gold != 0 {

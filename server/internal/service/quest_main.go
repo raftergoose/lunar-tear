@@ -65,7 +65,8 @@ func (s *QuestServiceServer) UpdateMainQuestSceneProgress(ctx context.Context, r
 }
 
 func (s *QuestServiceServer) StartMainQuest(ctx context.Context, req *pb.StartMainQuestRequest) (*pb.StartMainQuestResponse, error) {
-	log.Printf("[QuestService] StartMainQuest: %+v", req)
+	log.Printf("[QuestService] StartMainQuest: questId=%d isMainFlow=%v isReplayFlow=%v isBattleOnly=%v maxAutoOrbitCount=%d",
+		req.QuestId, req.IsMainFlow, req.IsReplayFlow, req.IsBattleOnly, req.MaxAutoOrbitCount)
 
 	engine := s.holder.Get().QuestHandler
 	userId := CurrentUserId(ctx, s.users, s.sessions)
@@ -76,6 +77,7 @@ func (s *QuestServiceServer) StartMainQuest(ctx context.Context, req *pb.StartMa
 		} else {
 			engine.HandleQuestStart(user, req.QuestId, req.IsBattleOnly, req.IsMainFlow, req.UserDeckNumber, nowMillis)
 		}
+		startAutoOrbit(user, model.QuestTypeMain, 0, req.QuestId, req.MaxAutoOrbitCount, nowMillis)
 	})
 
 	drops := engine.BattleDropRewards(req.QuestId)
@@ -93,6 +95,26 @@ func (s *QuestServiceServer) StartMainQuest(ctx context.Context, req *pb.StartMa
 	}, nil
 }
 
+func emptyAutoOrbitReward() *pb.QuestAutoOrbitResult {
+	return &pb.QuestAutoOrbitResult{
+		DropReward:               []*pb.QuestReward{},
+		UserStatusCampaignReward: []*pb.QuestReward{},
+	}
+}
+
+func autoOrbitDropsToProto(drops []store.AutoOrbitDropEntry) []*pb.QuestReward {
+	out := make([]*pb.QuestReward, len(drops))
+	for i, d := range drops {
+		out[i] = &pb.QuestReward{
+			PossessionType: d.PossessionType,
+			PossessionId:   d.PossessionId,
+			Count:          d.Count,
+			IsAutoSale:     d.IsAutoSale,
+		}
+	}
+	return out
+}
+
 func toProtoRewards(grants []questflow.RewardGrant) []*pb.QuestReward {
 	if len(grants) == 0 {
 		return []*pb.QuestReward{}
@@ -103,22 +125,31 @@ func toProtoRewards(grants []questflow.RewardGrant) []*pb.QuestReward {
 			PossessionType: int32(g.PossessionType),
 			PossessionId:   g.PossessionId,
 			Count:          g.Count,
+			IsAutoSale:     g.IsAutoSale,
 		}
 	}
 	return out
 }
 
 func (s *QuestServiceServer) FinishMainQuest(ctx context.Context, req *pb.FinishMainQuestRequest) (*pb.FinishMainQuestResponse, error) {
-	log.Printf("[QuestService] FinishMainQuest: questId=%d isMainFlow=%v isRetired=%v isAnnihilated=%v storySkipType=%d",
-		req.QuestId, req.IsMainFlow, req.IsRetired, req.IsAnnihilated, req.StorySkipType)
+	log.Printf("[QuestService] FinishMainQuest: questId=%d isMainFlow=%v isRetired=%v isAnnihilated=%v isAutoOrbit=%v storySkipType=%d",
+		req.QuestId, req.IsMainFlow, req.IsRetired, req.IsAnnihilated, req.IsAutoOrbit, req.StorySkipType)
 
 	nowMillis := gametime.NowMillis()
 	engine := s.holder.Get().QuestHandler
 	userId := CurrentUserId(ctx, s.users, s.sessions)
 	var outcome questflow.FinishOutcome
+	var endedDrops []store.AutoOrbitDropEntry
+	var loopEnded bool
 	s.users.UpdateUser(userId, func(user *store.UserState) {
 		outcome = engine.HandleQuestFinish(user, req.QuestId, req.IsRetired, req.IsAnnihilated, nowMillis)
+		endedDrops, loopEnded = finishAutoOrbit(user, req.IsAutoOrbit, req.IsRetired, req.IsAnnihilated, model.QuestTypeMain, 0, req.QuestId, nowMillis, outcome.DropRewards)
 	})
+
+	autoOrbitReward := emptyAutoOrbitReward()
+	if loopEnded {
+		autoOrbitReward.DropReward = autoOrbitDropsToProto(endedDrops)
+	}
 
 	return &pb.FinishMainQuestResponse{
 		DropReward:                      toProtoRewards(outcome.DropRewards),
@@ -130,6 +161,7 @@ func (s *QuestServiceServer) FinishMainQuest(ctx context.Context, req *pb.Finish
 		BigWinClearedQuestMissionIdList: outcome.BigWinClearedQuestMissionIds,
 		ReplayFlowFirstClearReward:      toProtoRewards(outcome.ReplayFlowFirstClearRewards),
 		UserStatusCampaignReward:        []*pb.QuestReward{},
+		AutoOrbitReward:                 autoOrbitReward,
 	}, nil
 }
 
@@ -162,7 +194,26 @@ func (s *QuestServiceServer) RestartMainQuest(ctx context.Context, req *pb.Resta
 
 func (s *QuestServiceServer) FinishAutoOrbit(ctx context.Context, req *emptypb.Empty) (*pb.FinishAutoOrbitResponse, error) {
 	log.Printf("[QuestService] FinishAutoOrbit")
-	return &pb.FinishAutoOrbitResponse{}, nil
+	userId := CurrentUserId(ctx, s.users, s.sessions)
+	var drops []store.AutoOrbitDropEntry
+	s.users.UpdateUser(userId, func(user *store.UserState) {
+		drops = consumeAutoOrbitRewards(user)
+	})
+	pbDrops := make([]*pb.QuestReward, len(drops))
+	for i, d := range drops {
+		pbDrops[i] = &pb.QuestReward{
+			PossessionType: d.PossessionType,
+			PossessionId:   d.PossessionId,
+			Count:          d.Count,
+		}
+	}
+	return &pb.FinishAutoOrbitResponse{
+		AutoOrbitResult: []*pb.QuestReward{},
+		AutoOrbitReward: &pb.QuestAutoOrbitResult{
+			DropReward:               pbDrops,
+			UserStatusCampaignReward: []*pb.QuestReward{},
+		},
+	}, nil
 }
 
 func (s *QuestServiceServer) SkipQuest(ctx context.Context, req *pb.SkipQuestRequest) (*pb.SkipQuestResponse, error) {

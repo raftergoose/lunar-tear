@@ -42,8 +42,9 @@ func (h *QuestHandler) HandleExtraQuestFinish(user *store.UserState, questId int
 	}
 
 	target := h.targetForExtra(questId)
-	outcome := h.evaluateFinishOutcome(user, questId, target, nowMillis)
-	if !isRetired {
+	var outcome FinishOutcome
+	if !isRetired && !isAnnihilated {
+		outcome = h.evaluateFinishOutcome(user, questId, target, nowMillis)
 		h.applyQuestVictory(user, questId, &outcome, nowMillis, false)
 	}
 

@@ -268,6 +268,9 @@ func ChangedTables(before, after *store.UserState) []string {
 	if !mapsEqualStruct(before.TowerAccumulationRewards, after.TowerAccumulationRewards) {
 		add("IUserEventQuestTowerAccumulationReward")
 	}
+	if !before.QuestAutoOrbit.Equal(after.QuestAutoOrbit) {
+		add("IUserQuestAutoOrbit")
+	}
 	if !mapsEqualStruct(before.LabyrinthStages, after.LabyrinthStages) {
 		add("IUserEventQuestLabyrinthStage")
 	}
@@ -476,6 +479,8 @@ func keyFieldsForTable(table string) []string {
 		return []string{"userId", "bigHuntWeeklyVersion"}
 	case "IUserDeckTypeNote":
 		return []string{"userId", "deckType"}
+	case "IUserQuestAutoOrbit":
+		return []string{"userId"}
 	default:
 		return nil
 	}

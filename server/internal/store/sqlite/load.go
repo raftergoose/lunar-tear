@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"lunar-tear/server/internal/model"
@@ -209,6 +210,17 @@ func load1to1(db *sql.DB, uid int64, u *store.UserState) {
 		FROM user_guerrilla_free_open WHERE user_id=?`, uid).
 		Scan(&u.GuerrillaFreeOpen.StartDatetime, &u.GuerrillaFreeOpen.OpenMinutes,
 			&u.GuerrillaFreeOpen.DailyOpenedCount, &u.GuerrillaFreeOpen.LatestVersion)
+
+	var accumulatedDropsJSON string
+	_ = db.QueryRow(`SELECT quest_type, chapter_id, quest_id, max_auto_orbit_count, cleared_auto_orbit_count, last_clear_datetime, latest_version, accumulated_drops_json
+		FROM user_quest_auto_orbit WHERE user_id=?`, uid).
+		Scan(&u.QuestAutoOrbit.QuestType, &u.QuestAutoOrbit.ChapterId, &u.QuestAutoOrbit.QuestId,
+			&u.QuestAutoOrbit.MaxAutoOrbitCount, &u.QuestAutoOrbit.ClearedAutoOrbitCount,
+			&u.QuestAutoOrbit.LastClearDatetime, &u.QuestAutoOrbit.LatestVersion,
+			&accumulatedDropsJSON)
+	if accumulatedDropsJSON != "" && accumulatedDropsJSON != "[]" {
+		_ = json.Unmarshal([]byte(accumulatedDropsJSON), &u.QuestAutoOrbit.AccumulatedDrops)
+	}
 
 	var isTicket int
 	_ = db.QueryRow(`SELECT is_use_explore_ticket, playing_explore_id, latest_play_datetime, latest_version

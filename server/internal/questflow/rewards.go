@@ -3,6 +3,8 @@ package questflow
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
 	"lunar-tear/server/internal/campaign"
 	"lunar-tear/server/internal/gameutil"
@@ -126,6 +128,54 @@ func (h *QuestHandler) evaluateFinishOutcome(user *store.UserState, questId int3
 
 	outcome.DropRewards = h.computeDropRewards(questDef, target, nowMillis)
 	return outcome
+}
+
+var autoSaleRarityTiers = map[int32]bool{10: true, 20: true, 30: true, 40: true, 50: true}
+
+// Rarity tiers (10..50) and ranks (1..5) are disjoint, so the delimited values
+// are classified by range — independent of the client's map key or delimiter.
+func parseAutoSaleRules(settings map[int32]store.AutoSaleSettingState) (raritySet, rankSet map[int32]bool) {
+	raritySet = map[int32]bool{}
+	rankSet = map[int32]bool{}
+	for _, s := range settings {
+		for _, n := range extractInts(s.PossessionAutoSaleItemValue) {
+			switch {
+			case autoSaleRarityTiers[n]:
+				raritySet[n] = true
+			case n >= 1 && n <= 5:
+				rankSet[n] = true
+			}
+		}
+	}
+	return raritySet, rankSet
+}
+
+func extractInts(s string) []int32 {
+	fields := strings.FieldsFunc(s, func(r rune) bool { return r < '0' || r > '9' })
+	out := make([]int32, 0, len(fields))
+	for _, f := range fields {
+		if v, err := strconv.Atoi(f); err == nil {
+			out = append(out, int32(v))
+		}
+	}
+	return out
+}
+
+func (h *QuestHandler) grantDropRewards(user *store.UserState, drops []RewardGrant, raritySet, rankSet map[int32]bool, nowMillis int64) {
+	for i := range drops {
+		d := drops[i]
+		if d.PossessionType == model.PossessionTypeParts || d.PossessionType == model.PossessionTypePartsEnhanced {
+			chosenId, sold := h.Granter.GrantOrSellPartsDrop(user, d.PossessionId, raritySet, rankSet, nowMillis)
+			if sold {
+				// Sold parts have no inventory row, so the popup needs the rolled
+				// variant id; kept parts read theirs from the parts table diff.
+				drops[i].PossessionId = chosenId
+				drops[i].IsAutoSale = true
+			}
+			continue
+		}
+		h.applyRewardPossession(user, d.PossessionType, d.PossessionId, d.Count, nowMillis)
+	}
 }
 
 func (h *QuestHandler) computeDropRewards(questDef masterdata.EntityMQuest, target campaign.QuestTarget, nowMillis int64) []RewardGrant {

@@ -2,11 +2,23 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"lunar-tear/server/internal/model"
 	"lunar-tear/server/internal/store"
 )
+
+func marshalAutoOrbitDrops(drops []store.AutoOrbitDropEntry) string {
+	if len(drops) == 0 {
+		return "[]"
+	}
+	b, err := json.Marshal(drops)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
 
 func boolToInt(b bool) int {
 	if b {
@@ -107,6 +119,13 @@ func writeUserState(tx *sql.Tx, uid int64, u *store.UserState) error {
 	}
 	if err := exec(`INSERT INTO user_guerrilla_free_open (user_id, start_datetime, open_minutes, daily_opened_count, latest_version) VALUES (?,?,?,?,?)`,
 		uid, u.GuerrillaFreeOpen.StartDatetime, u.GuerrillaFreeOpen.OpenMinutes, u.GuerrillaFreeOpen.DailyOpenedCount, u.GuerrillaFreeOpen.LatestVersion); err != nil {
+		return err
+	}
+	if err := exec(`INSERT INTO user_quest_auto_orbit (user_id, quest_type, chapter_id, quest_id, max_auto_orbit_count, cleared_auto_orbit_count, last_clear_datetime, latest_version, accumulated_drops_json) VALUES (?,?,?,?,?,?,?,?,?)`,
+		uid, u.QuestAutoOrbit.QuestType, u.QuestAutoOrbit.ChapterId, u.QuestAutoOrbit.QuestId,
+		u.QuestAutoOrbit.MaxAutoOrbitCount, u.QuestAutoOrbit.ClearedAutoOrbitCount,
+		u.QuestAutoOrbit.LastClearDatetime, u.QuestAutoOrbit.LatestVersion,
+		marshalAutoOrbitDrops(u.QuestAutoOrbit.AccumulatedDrops)); err != nil {
 		return err
 	}
 	if err := exec(`INSERT INTO user_explore (user_id, is_use_explore_ticket, playing_explore_id, latest_play_datetime, latest_version) VALUES (?,?,?,?,?)`,
@@ -671,6 +690,15 @@ func diffAndSave(tx *sql.Tx, uid int64, before, after *store.UserState) error {
 	if before.GuerrillaFreeOpen != after.GuerrillaFreeOpen {
 		if err := exec(`UPDATE user_guerrilla_free_open SET start_datetime=?, open_minutes=?, daily_opened_count=?, latest_version=? WHERE user_id=?`,
 			after.GuerrillaFreeOpen.StartDatetime, after.GuerrillaFreeOpen.OpenMinutes, after.GuerrillaFreeOpen.DailyOpenedCount, after.GuerrillaFreeOpen.LatestVersion, uid); err != nil {
+			return err
+		}
+	}
+	if !before.QuestAutoOrbit.Equal(after.QuestAutoOrbit) {
+		if err := exec(`UPDATE user_quest_auto_orbit SET quest_type=?, chapter_id=?, quest_id=?, max_auto_orbit_count=?, cleared_auto_orbit_count=?, last_clear_datetime=?, latest_version=?, accumulated_drops_json=? WHERE user_id=?`,
+			after.QuestAutoOrbit.QuestType, after.QuestAutoOrbit.ChapterId, after.QuestAutoOrbit.QuestId,
+			after.QuestAutoOrbit.MaxAutoOrbitCount, after.QuestAutoOrbit.ClearedAutoOrbitCount,
+			after.QuestAutoOrbit.LastClearDatetime, after.QuestAutoOrbit.LatestVersion,
+			marshalAutoOrbitDrops(after.QuestAutoOrbit.AccumulatedDrops), uid); err != nil {
 			return err
 		}
 	}
