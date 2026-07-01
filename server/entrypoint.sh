@@ -4,7 +4,7 @@ set -e
 DB_PATH="${LUNAR_DB_PATH:-db/game.db}"
 
 mkdir -p $(dirname $DB_PATH)
-goose -dir migrations sqlite3 "$DB_PATH" up
+goose -dir /opt/lunar-tear/migrations sqlite3 "$DB_PATH" up
 
 AUTH_FLAG=""
 if [ -n "${LUNAR_AUTH_URL}" ]; then
@@ -16,7 +16,7 @@ if [ -n "${LUNAR_ADMIN_LISTEN}" ]; then
   ADMIN_FLAG="--admin-listen ${LUNAR_ADMIN_LISTEN}"
 fi
 
-exec ./lunar-tear \
+exec /opt/lunar-tear/lunar-tear \
   --listen "${LUNAR_LISTEN:-0.0.0.0:443}" \
   --public-addr "${LUNAR_PUBLIC_ADDR}" \
   --octo-url "${LUNAR_OCTO_URL}" \
